@@ -11,7 +11,8 @@ const moveBefore = <T extends { id: string; order: number }>(items: T[], activeI
   if (activeIndex < 0 || overIndex < 0 || activeIndex === overIndex) return items;
   const next = [...items];
   const [moved] = next.splice(activeIndex, 1);
-  next.splice(overIndex, 0, moved);
+  const nextOverIndex = next.findIndex((item) => item.id === overId);
+  next.splice(nextOverIndex, 0, moved);
   return normalizeOrders(next);
 };
 
