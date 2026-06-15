@@ -64,7 +64,7 @@ button:disabled {
 .planner-panel {
   min-width: 0;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(30, 35, 83, 0.92);
+  background: #1e2353;
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.32);
 }
 
