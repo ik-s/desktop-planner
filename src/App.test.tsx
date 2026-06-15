@@ -233,7 +233,7 @@ describe("App planner persistence", () => {
 
     fireEvent.change(screen.getByLabelText("새 큰 계획"), { target: { value: "테스트 계획" } });
     fireEvent.click(screen.getByRole("button", { name: "큰 계획 만들기" }));
-    fireEvent.click(await screen.findByRole("button", { name: "오늘 추가" }));
+    fireEvent.click(await screen.findByRole("button", { name: "선택 날짜 추가" }));
 
     fireEvent.click(document.querySelector<HTMLButtonElement>(".large-plan-card__open")!);
     fireEvent.change(document.querySelector<HTMLInputElement>("#detail-item-title")!, {
@@ -258,12 +258,12 @@ describe("App planner persistence", () => {
   it("starts empty, wires real planner actions, and reloads persisted state", async () => {
     const firstRender = render(<App />);
 
-    await screen.findByText("오늘 등록된 큰 계획이 없습니다");
+    await screen.findByText("선택한 날짜에 등록된 큰 계획이 없습니다");
     expect(screen.queryByText(/Rust/)).toBeNull();
 
     fireEvent.change(screen.getByLabelText("새 큰 계획"), { target: { value: "운동" } });
     fireEvent.click(screen.getByRole("button", { name: "큰 계획 만들기" }));
-    fireEvent.click(screen.getByRole("button", { name: "오늘 추가" }));
+    fireEvent.click(screen.getByRole("button", { name: "선택 날짜 추가" }));
 
     fireEvent.click(screen.getByRole("button", { name: "운동 대기" }));
 

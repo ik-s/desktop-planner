@@ -60,7 +60,7 @@ export function PlanLibraryPanel({
                   disabled={isAdded}
                   onClick={() => onAddPlanToToday(plan.id)}
                 >
-                  {isAdded ? "추가됨" : "오늘 추가"}
+                  {isAdded ? "추가됨" : "선택 날짜 추가"}
                 </button>
               </div>
             );

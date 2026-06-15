@@ -69,7 +69,7 @@ export function PlanDetailView({
     <section className="planner-panel planner-panel--main" aria-labelledby="detail-title">
       <button className="button button--ghost back-button" type="button" onClick={onBack}>
         <ArrowLeft size={18} aria-hidden />
-        오늘 계획
+        선택 날짜 계획
       </button>
 
       <div className="panel-heading panel-heading--detail">

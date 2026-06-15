@@ -63,7 +63,7 @@ export function TodayPlannerView({
     <section className="planner-panel planner-panel--main" aria-labelledby="today-title">
       <div className="panel-heading">
         <div>
-          <span className="eyebrow">오늘의 플래너</span>
+          <span className="eyebrow">선택한 날짜의 플래너</span>
           <h1 id="today-title">{formatPlannerDate(date)}</h1>
         </div>
         <div className="planner-heading-actions">
@@ -88,7 +88,7 @@ export function TodayPlannerView({
               오늘
             </button>
           </div>
-          <div className="quick-add" aria-label="오늘에 큰 계획 추가">
+          <div className="quick-add" aria-label="선택한 날짜에 큰 계획 추가">
             {availablePlans.slice(0, 2).map((plan) => (
               <button
                 key={plan.id}
@@ -117,7 +117,7 @@ export function TodayPlannerView({
         </DndContext>
       ) : (
         <div className="entry-stack">
-          <EmptyState title="오늘 등록된 큰 계획이 없습니다" action="오른쪽 라이브러리에서 계획을 추가해 보세요." />
+          <EmptyState title="선택한 날짜에 등록된 큰 계획이 없습니다" action="오른쪽 라이브러리에서 계획을 추가해 보세요." />
         </div>
       )}
     </section>
