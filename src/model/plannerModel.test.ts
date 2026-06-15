@@ -107,4 +107,57 @@ describe("plannerModel", () => {
     expect(state.dailyEntries["2026-06-15"][0].status).toBe("in_progress");
     expect(state.dailyEntries["2026-06-15"][0].detailItems[0].status).toBe("done");
   });
+
+  it("returns the same state when reordering a missing date", () => {
+    const state = createInitialState();
+    const nextDailyState = reorderDailyEntries(state, "2026-06-16", "missing-active", "missing-over");
+    const nextDetailState = reorderDetailItems(state, "2026-06-16", "missing-entry", "missing-active", "missing-over");
+    expect(nextDailyState).toBe(state);
+    expect(nextDetailState).toBe(state);
+    expect(Object.keys(state.dailyEntries)).toEqual([]);
+  });
+
+  it("returns the same state when adding a detail item to a missing entry", () => {
+    let state = createInitialState();
+    state = addLargePlan(state, "Plan A", "2026-06-15T00:00:00.000Z");
+    state = addPlanToDate(state, "2026-06-15", state.largePlans[0].id, "2026-06-15T00:01:00.000Z");
+    const nextState = addDetailItem(state, "2026-06-15", "missing-entry", "Detail A", "2026-06-15T00:02:00.000Z");
+    expect(nextState).toBe(state);
+    expect(state.dailyEntries["2026-06-15"][0].detailItems).toEqual([]);
+  });
+
+  it("returns the same state when updating a missing daily entry", () => {
+    let state = createInitialState();
+    state = addLargePlan(state, "Plan A", "2026-06-15T00:00:00.000Z");
+    state = addPlanToDate(state, "2026-06-15", state.largePlans[0].id, "2026-06-15T00:01:00.000Z");
+    const nextState = updateDailyEntryStatus(
+      state,
+      "2026-06-15",
+      "missing-entry",
+      "done",
+      "2026-06-15T00:02:00.000Z"
+    );
+    expect(nextState).toBe(state);
+    expect(state.dailyEntries["2026-06-15"][0].status).toBe("waiting");
+  });
+
+  it("returns the same state when updating a missing detail item", () => {
+    let state = createInitialState();
+    state = addLargePlan(state, "Plan A", "2026-06-15T00:00:00.000Z");
+    state = addPlanToDate(state, "2026-06-15", state.largePlans[0].id, "2026-06-15T00:01:00.000Z");
+    const entryId = state.dailyEntries["2026-06-15"][0].id;
+    state = addDetailItem(state, "2026-06-15", entryId, "Detail A", "2026-06-15T00:02:00.000Z");
+    const originalUpdatedAt = state.dailyEntries["2026-06-15"][0].updatedAt;
+    const nextState = updateDetailItemStatus(
+      state,
+      "2026-06-15",
+      entryId,
+      "missing-item",
+      "done",
+      "2026-06-15T00:03:00.000Z"
+    );
+    expect(nextState).toBe(state);
+    expect(state.dailyEntries["2026-06-15"][0].updatedAt).toBe(originalUpdatedAt);
+    expect(state.dailyEntries["2026-06-15"][0].detailItems[0].status).toBe("waiting");
+  });
 });

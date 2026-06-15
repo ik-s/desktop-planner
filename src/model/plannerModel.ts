@@ -59,7 +59,9 @@ export const addDetailItem = (
 ): PlannerState => {
   const trimmed = title.trim();
   if (!trimmed) return state;
-  const entries = state.dailyEntries[date] ?? [];
+  const entries = state.dailyEntries[date];
+  if (!entries) return state;
+  if (!entries.some((entry) => entry.id === entryId)) return state;
   const nextEntries = entries.map((entry) => {
     if (entry.id !== entryId) return entry;
     const item: DetailItem = {
@@ -76,8 +78,11 @@ export const addDetailItem = (
 };
 
 export const reorderDailyEntries = (state: PlannerState, date: string, activeId: string, overId: string): PlannerState => {
-  const entries = state.dailyEntries[date] ?? [];
-  return { ...state, dailyEntries: { ...state.dailyEntries, [date]: moveBefore(entries, activeId, overId) } };
+  const entries = state.dailyEntries[date];
+  if (!entries) return state;
+  const nextEntries = moveBefore(entries, activeId, overId);
+  if (nextEntries === entries) return state;
+  return { ...state, dailyEntries: { ...state.dailyEntries, [date]: nextEntries } };
 };
 
 export const reorderDetailItems = (
@@ -87,10 +92,13 @@ export const reorderDetailItems = (
   activeId: string,
   overId: string
 ): PlannerState => {
-  const entries = state.dailyEntries[date] ?? [];
-  const nextEntries = entries.map((entry) =>
-    entry.id === entryId ? { ...entry, detailItems: moveBefore(entry.detailItems, activeId, overId) } : entry
-  );
+  const entries = state.dailyEntries[date];
+  if (!entries) return state;
+  const targetEntry = entries.find((entry) => entry.id === entryId);
+  if (!targetEntry) return state;
+  const nextDetailItems = moveBefore(targetEntry.detailItems, activeId, overId);
+  if (nextDetailItems === targetEntry.detailItems) return state;
+  const nextEntries = entries.map((entry) => (entry.id === entryId ? { ...entry, detailItems: nextDetailItems } : entry));
   return { ...state, dailyEntries: { ...state.dailyEntries, [date]: nextEntries } };
 };
 
@@ -100,15 +108,18 @@ export const updateDailyEntryStatus = (
   entryId: string,
   status: PlannerStatus,
   now: string
-): PlannerState => ({
-  ...state,
-  dailyEntries: {
-    ...state.dailyEntries,
-    [date]: (state.dailyEntries[date] ?? []).map((entry) =>
-      entry.id === entryId ? { ...entry, status, updatedAt: now } : entry
-    )
-  }
-});
+): PlannerState => {
+  const entries = state.dailyEntries[date];
+  if (!entries) return state;
+  if (!entries.some((entry) => entry.id === entryId)) return state;
+  return {
+    ...state,
+    dailyEntries: {
+      ...state.dailyEntries,
+      [date]: entries.map((entry) => (entry.id === entryId ? { ...entry, status, updatedAt: now } : entry))
+    }
+  };
+};
 
 export const updateDetailItemStatus = (
   state: PlannerState,
@@ -117,18 +128,27 @@ export const updateDetailItemStatus = (
   itemId: string,
   status: PlannerStatus,
   now: string
-): PlannerState => ({
-  ...state,
-  dailyEntries: {
-    ...state.dailyEntries,
-    [date]: (state.dailyEntries[date] ?? []).map((entry) =>
-      entry.id === entryId
-        ? {
-            ...entry,
-            updatedAt: now,
-            detailItems: entry.detailItems.map((item) => (item.id === itemId ? { ...item, status, updatedAt: now } : item))
-          }
-        : entry
-    )
-  }
-});
+): PlannerState => {
+  const entries = state.dailyEntries[date];
+  if (!entries) return state;
+  const targetEntry = entries.find((entry) => entry.id === entryId);
+  if (!targetEntry) return state;
+  if (!targetEntry.detailItems.some((item) => item.id === itemId)) return state;
+  return {
+    ...state,
+    dailyEntries: {
+      ...state.dailyEntries,
+      [date]: entries.map((entry) =>
+        entry.id === entryId
+          ? {
+              ...entry,
+              updatedAt: now,
+              detailItems: entry.detailItems.map((item) =>
+                item.id === itemId ? { ...item, status, updatedAt: now } : item
+              )
+            }
+          : entry
+      )
+    }
+  };
+};
