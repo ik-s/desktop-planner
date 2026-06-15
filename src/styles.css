@@ -61,6 +61,10 @@ button:disabled {
   margin: 0 auto;
 }
 
+.planner-layout--loading {
+  grid-template-columns: 1fr;
+}
+
 .planner-panel {
   min-width: 0;
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -71,6 +75,16 @@ button:disabled {
 .planner-panel--main {
   min-height: calc(100vh - 56px);
   padding: 28px;
+}
+
+.loading-panel {
+  display: grid;
+  align-content: center;
+  gap: 12px;
+}
+
+.loading-panel p {
+  color: rgba(255, 255, 255, 0.72);
 }
 
 .library-panel {

@@ -1,6 +1,9 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App, { formatDateKey } from "./App";
+import { PlanDetailView } from "./components/PlanDetailView";
+import type { DailyPlanEntry, LargePlan, PlannerState } from "./model/types";
+import type { PlannerStorage } from "./storage/plannerStorage";
 
 describe("formatDateKey", () => {
   it("formats from local date getters instead of UTC ISO output", () => {
@@ -14,6 +17,63 @@ describe("formatDateKey", () => {
     } as unknown as Date;
 
     expect(formatDateKey(fakeLocalDate)).toBe("2026-06-15");
+  });
+});
+
+describe("App hydration", () => {
+  it("does not expose planner interactions before persisted state loads", () => {
+    const loadPromise = new Promise<PlannerState>(() => undefined);
+    const delayedStorage: PlannerStorage = {
+      loadState: () => loadPromise,
+      saveState: vi.fn()
+    };
+
+    render(<App storage={delayedStorage} />);
+
+    expect(screen.getByText("플래너를 불러오는 중입니다")).not.toBeNull();
+    expect(screen.queryByLabelText("새 큰 계획")).toBeNull();
+  });
+});
+
+describe("PlanDetailView", () => {
+  it("keeps whitespace-only detail submissions unavailable", () => {
+    const entry: DailyPlanEntry = {
+      id: "entry-1",
+      date: "2026-06-15",
+      largePlanId: "plan-1",
+      order: 0,
+      status: "waiting",
+      detailItems: [],
+      createdAt: "2026-06-15T00:00:00.000Z",
+      updatedAt: "2026-06-15T00:00:00.000Z"
+    };
+    const plan: LargePlan = {
+      id: "plan-1",
+      title: "운동",
+      createdAt: "2026-06-15T00:00:00.000Z",
+      updatedAt: "2026-06-15T00:00:00.000Z"
+    };
+
+    render(
+      <PlanDetailView
+        date="2026-06-15"
+        entry={entry}
+        plan={plan}
+        onBack={vi.fn()}
+        onAddDetailItem={vi.fn()}
+        onEntryStatusChange={vi.fn()}
+        onDetailItemStatusChange={vi.fn()}
+      />
+    );
+
+    const detailInput = document.querySelector<HTMLInputElement>("#detail-item-title");
+    const submitButton = document.querySelector<HTMLButtonElement>(".add-detail-form button[type='submit']");
+
+    expect(detailInput).not.toBeNull();
+    expect(submitButton).not.toBeNull();
+    fireEvent.change(detailInput!, { target: { value: "   " } });
+
+    expect(submitButton).toHaveProperty("disabled", true);
   });
 });
 

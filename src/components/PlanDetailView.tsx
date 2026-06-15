@@ -29,10 +29,13 @@ export function PlanDetailView({
   onDetailItemStatusChange(entryId: string, itemId: string, status: PlannerStatus): void;
 }) {
   const [detailTitle, setDetailTitle] = useState("");
+  const canSubmitDetail = detailTitle.trim().length > 0;
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    onAddDetailItem(entry.id, detailTitle);
+    const trimmedTitle = detailTitle.trim();
+    if (!trimmedTitle) return;
+    onAddDetailItem(entry.id, trimmedTitle);
     setDetailTitle("");
   };
 
@@ -77,7 +80,7 @@ export function PlanDetailView({
             onChange={(event) => setDetailTitle(event.target.value)}
             placeholder="예: 1강 듣기"
           />
-          <button className="icon-button" type="submit" aria-label="세부 항목 추가">
+          <button className="icon-button" type="submit" aria-label="세부 항목 추가" disabled={!canSubmitDetail}>
             <Plus size={20} aria-hidden />
           </button>
         </div>

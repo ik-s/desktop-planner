@@ -11,9 +11,9 @@ import {
   updateDetailItemStatus
 } from "./model/plannerModel";
 import type { LargePlan, PlannerState, PlannerStatus } from "./model/types";
-import { createLocalPlannerStorage } from "./storage/plannerStorage";
+import { createLocalPlannerStorage, type PlannerStorage } from "./storage/plannerStorage";
 
-const storage = createLocalPlannerStorage();
+const defaultStorage = createLocalPlannerStorage();
 
 export const formatDateKey = (date: Date) => {
   const year = date.getFullYear();
@@ -28,7 +28,7 @@ const getPlansById = (plans: LargePlan[]) => new Map(plans.map((plan) => [plan.i
 
 const nowIso = () => new Date().toISOString();
 
-export default function App() {
+export default function App({ storage = defaultStorage }: { storage?: PlannerStorage }) {
   const [plannerState, setPlannerState] = useState<PlannerState>(() => createInitialState());
   const [isLoaded, setIsLoaded] = useState(false);
   const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
@@ -46,7 +46,7 @@ export default function App() {
     return () => {
       isActive = false;
     };
-  }, []);
+  }, [storage]);
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -64,6 +64,20 @@ export default function App() {
       setSelectedEntryId(null);
     }
   }, [selectedEntryId, todayEntries]);
+
+  if (!isLoaded) {
+    return (
+      <main className="app-shell" aria-label="데스크톱 데일리 플래너">
+        <div className="planner-layout planner-layout--loading">
+          <section className="planner-panel planner-panel--main loading-panel" aria-live="polite">
+            <span className="eyebrow">초기화</span>
+            <h1>플래너를 불러오는 중입니다</h1>
+            <p>저장된 계획을 확인하고 있습니다.</p>
+          </section>
+        </div>
+      </main>
+    );
+  }
 
   const handleCreatePlan = (title: string) => {
     setPlannerState((current) => addLargePlan(current, title, nowIso()));
