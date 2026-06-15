@@ -5,14 +5,13 @@ const makeId = (prefix: string, seed: string) => `${prefix}-${seed.replace(/[^a-
 const normalizeOrders = <T extends { order: number }>(items: T[]): T[] =>
   items.map((item, index) => ({ ...item, order: index }));
 
-const moveBefore = <T extends { id: string; order: number }>(items: T[], activeId: string, overId: string): T[] => {
+const moveToIndex = <T extends { id: string; order: number }>(items: T[], activeId: string, overId: string): T[] => {
   const activeIndex = items.findIndex((item) => item.id === activeId);
   const overIndex = items.findIndex((item) => item.id === overId);
   if (activeIndex < 0 || overIndex < 0 || activeIndex === overIndex) return items;
   const next = [...items];
   const [moved] = next.splice(activeIndex, 1);
-  const nextOverIndex = next.findIndex((item) => item.id === overId);
-  next.splice(nextOverIndex, 0, moved);
+  next.splice(overIndex, 0, moved);
   return normalizeOrders(next);
 };
 
@@ -80,7 +79,7 @@ export const addDetailItem = (
 export const reorderDailyEntries = (state: PlannerState, date: string, activeId: string, overId: string): PlannerState => {
   const entries = state.dailyEntries[date];
   if (!entries) return state;
-  const nextEntries = moveBefore(entries, activeId, overId);
+  const nextEntries = moveToIndex(entries, activeId, overId);
   if (nextEntries === entries) return state;
   return { ...state, dailyEntries: { ...state.dailyEntries, [date]: nextEntries } };
 };
@@ -96,7 +95,7 @@ export const reorderDetailItems = (
   if (!entries) return state;
   const targetEntry = entries.find((entry) => entry.id === entryId);
   if (!targetEntry) return state;
-  const nextDetailItems = moveBefore(targetEntry.detailItems, activeId, overId);
+  const nextDetailItems = moveToIndex(targetEntry.detailItems, activeId, overId);
   if (nextDetailItems === targetEntry.detailItems) return state;
   const nextEntries = entries.map((entry) => (entry.id === entryId ? { ...entry, detailItems: nextDetailItems } : entry));
   return { ...state, dailyEntries: { ...state.dailyEntries, [date]: nextEntries } };

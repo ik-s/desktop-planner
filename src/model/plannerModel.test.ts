@@ -44,9 +44,23 @@ describe("plannerModel", () => {
     const secondId = state.dailyEntries["2026-06-15"][1].id;
     state = reorderDailyEntries(state, "2026-06-15", secondId, firstId);
     expect(state.dailyEntries["2026-06-15"].map((entry) => entry.id)).toEqual([secondId, firstId]);
+    expect(state.dailyEntries["2026-06-15"].map((entry) => entry.order)).toEqual([0, 1]);
   });
 
-  it("moves an earlier large plan card before a later card", () => {
+  it("moves the first large plan card over the second card", () => {
+    let state = createInitialState();
+    state = addLargePlan(state, "Plan A", "2026-06-15T00:00:00.000Z");
+    state = addLargePlan(state, "Plan B", "2026-06-15T00:01:00.000Z");
+    state = addPlanToDate(state, "2026-06-15", state.largePlans[0].id, "2026-06-15T00:02:00.000Z");
+    state = addPlanToDate(state, "2026-06-15", state.largePlans[1].id, "2026-06-15T00:03:00.000Z");
+    const firstId = state.dailyEntries["2026-06-15"][0].id;
+    const secondId = state.dailyEntries["2026-06-15"][1].id;
+    state = reorderDailyEntries(state, "2026-06-15", firstId, secondId);
+    expect(state.dailyEntries["2026-06-15"].map((entry) => entry.id)).toEqual([secondId, firstId]);
+    expect(state.dailyEntries["2026-06-15"].map((entry) => entry.order)).toEqual([0, 1]);
+  });
+
+  it("moves an earlier large plan card to a later card position", () => {
     let state = createInitialState();
     state = addLargePlan(state, "Plan A", "2026-06-15T00:00:00.000Z");
     state = addLargePlan(state, "Plan B", "2026-06-15T00:01:00.000Z");
@@ -58,7 +72,7 @@ describe("plannerModel", () => {
     const secondId = state.dailyEntries["2026-06-15"][1].id;
     const thirdId = state.dailyEntries["2026-06-15"][2].id;
     state = reorderDailyEntries(state, "2026-06-15", firstId, thirdId);
-    expect(state.dailyEntries["2026-06-15"].map((entry) => entry.id)).toEqual([secondId, firstId, thirdId]);
+    expect(state.dailyEntries["2026-06-15"].map((entry) => entry.id)).toEqual([secondId, thirdId, firstId]);
     expect(state.dailyEntries["2026-06-15"].map((entry) => entry.order)).toEqual([0, 1, 2]);
   });
 
@@ -74,7 +88,20 @@ describe("plannerModel", () => {
     expect(state.dailyEntries["2026-06-15"][0].detailItems.map((item) => item.title)).toEqual(["Rust 2강", "Rust 1강"]);
   });
 
-  it("moves an earlier detail item before a later item", () => {
+  it("moves the first detail item over the second item", () => {
+    let state = createInitialState();
+    state = addLargePlan(state, "Plan A", "2026-06-15T00:00:00.000Z");
+    state = addPlanToDate(state, "2026-06-15", state.largePlans[0].id, "2026-06-15T00:01:00.000Z");
+    const entryId = state.dailyEntries["2026-06-15"][0].id;
+    state = addDetailItem(state, "2026-06-15", entryId, "Detail A", "2026-06-15T00:02:00.000Z");
+    state = addDetailItem(state, "2026-06-15", entryId, "Detail B", "2026-06-15T00:03:00.000Z");
+    const [first, second] = state.dailyEntries["2026-06-15"][0].detailItems;
+    state = reorderDetailItems(state, "2026-06-15", entryId, first.id, second.id);
+    expect(state.dailyEntries["2026-06-15"][0].detailItems.map((item) => item.id)).toEqual([second.id, first.id]);
+    expect(state.dailyEntries["2026-06-15"][0].detailItems.map((item) => item.order)).toEqual([0, 1]);
+  });
+
+  it("moves an earlier detail item to a later item position", () => {
     let state = createInitialState();
     state = addLargePlan(state, "Plan A", "2026-06-15T00:00:00.000Z");
     state = addPlanToDate(state, "2026-06-15", state.largePlans[0].id, "2026-06-15T00:01:00.000Z");
@@ -86,12 +113,12 @@ describe("plannerModel", () => {
     state = reorderDetailItems(state, "2026-06-15", entryId, first.id, third.id);
     expect(state.dailyEntries["2026-06-15"][0].detailItems.map((item) => item.title)).toEqual([
       "Detail B",
-      "Detail A",
-      "Detail C"
+      "Detail C",
+      "Detail A"
     ]);
     expect(state.dailyEntries["2026-06-15"][0].detailItems.map((item) => item.order)).toEqual([0, 1, 2]);
-    expect(state.dailyEntries["2026-06-15"][0].detailItems[2].id).toBe(third.id);
-    expect(state.dailyEntries["2026-06-15"][0].detailItems[1].id).toBe(first.id);
+    expect(state.dailyEntries["2026-06-15"][0].detailItems[2].id).toBe(first.id);
+    expect(state.dailyEntries["2026-06-15"][0].detailItems[1].id).toBe(third.id);
     expect(state.dailyEntries["2026-06-15"][0].detailItems[0].id).toBe(second.id);
   });
 
