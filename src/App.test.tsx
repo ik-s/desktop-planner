@@ -3,8 +3,17 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import App, { formatDateKey } from "./App";
 
 describe("formatDateKey", () => {
-  it("formats a local calendar date as YYYY-MM-DD", () => {
-    expect(formatDateKey(new Date(2026, 5, 15))).toBe("2026-06-15");
+  it("formats from local date getters instead of UTC ISO output", () => {
+    const fakeLocalDate = {
+      getFullYear: () => 2026,
+      getMonth: () => 5,
+      getDate: () => 15,
+      toISOString: () => {
+        throw new Error("formatDateKey must not use UTC ISO formatting");
+      }
+    } as unknown as Date;
+
+    expect(formatDateKey(fakeLocalDate)).toBe("2026-06-15");
   });
 });
 
