@@ -1,0 +1,26 @@
+:root {
+  font-family: Pretendard, Inter, system-ui, sans-serif;
+  color: #ffffff;
+  background: #0a0d3a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: #0a0d3a;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+.app-shell {
+  min-height: 100vh;
+  padding: 32px;
+}
