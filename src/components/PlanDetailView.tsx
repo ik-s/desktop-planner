@@ -1,20 +1,41 @@
-import { ArrowLeft } from "lucide-react";
-import type { DailyPlanEntry, LargePlan } from "../model/types";
+import { ArrowLeft, Plus } from "lucide-react";
+import { FormEvent, useState } from "react";
+import type { DailyPlanEntry, LargePlan, PlannerStatus } from "../model/types";
 import { DetailItemRow } from "./DetailItemRow";
 import { EmptyState } from "./EmptyState";
 import { StatusBadge } from "./StatusBadge";
+
+const statusOptions: { value: PlannerStatus; label: string }[] = [
+  { value: "waiting", label: "대기" },
+  { value: "in_progress", label: "진행중" },
+  { value: "done", label: "완료" }
+];
 
 export function PlanDetailView({
   date,
   entry,
   plan,
-  onBack
+  onBack,
+  onAddDetailItem,
+  onEntryStatusChange,
+  onDetailItemStatusChange
 }: {
   date: string;
   entry: DailyPlanEntry;
   plan: LargePlan;
   onBack(): void;
+  onAddDetailItem(entryId: string, title: string): void;
+  onEntryStatusChange(entryId: string, status: PlannerStatus): void;
+  onDetailItemStatusChange(entryId: string, itemId: string, status: PlannerStatus): void;
 }) {
+  const [detailTitle, setDetailTitle] = useState("");
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    onAddDetailItem(entry.id, detailTitle);
+    setDetailTitle("");
+  };
+
   return (
     <section className="planner-panel planner-panel--main" aria-labelledby="detail-title">
       <button className="button button--ghost back-button" type="button" onClick={onBack}>
@@ -27,14 +48,52 @@ export function PlanDetailView({
           <span className="eyebrow">{date}</span>
           <h1 id="detail-title">{plan.title}</h1>
         </div>
-        <StatusBadge status={entry.status} />
+        <div className="status-control">
+          <StatusBadge status={entry.status} />
+          <label>
+            <span>계획 상태</span>
+            <select
+              className="status-select"
+              value={entry.status}
+              onChange={(event) => onEntryStatusChange(entry.id, event.target.value as PlannerStatus)}
+            >
+              {statusOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
       </div>
+
+      <form className="add-detail-form" onSubmit={handleSubmit}>
+        <label htmlFor="detail-item-title">세부 항목</label>
+        <div className="input-row">
+          <input
+            id="detail-item-title"
+            type="text"
+            value={detailTitle}
+            onChange={(event) => setDetailTitle(event.target.value)}
+            placeholder="예: 1강 듣기"
+          />
+          <button className="icon-button" type="submit" aria-label="세부 항목 추가">
+            <Plus size={20} aria-hidden />
+          </button>
+        </div>
+      </form>
 
       <div className="detail-list">
         {entry.detailItems.length > 0 ? (
-          entry.detailItems.map((item) => <DetailItemRow key={item.id} item={item} />)
+          entry.detailItems.map((item) => (
+            <DetailItemRow
+              key={item.id}
+              item={item}
+              onStatusChange={(itemId, status) => onDetailItemStatusChange(entry.id, itemId, status)}
+            />
+          ))
         ) : (
-          <EmptyState title="세부 항목이 없습니다" action="다음 단계에서 세부 항목 입력과 저장이 연결됩니다." />
+          <EmptyState title="세부 항목이 없습니다" action="이 계획을 실행할 작은 단계를 추가해 보세요." />
         )}
       </div>
     </section>

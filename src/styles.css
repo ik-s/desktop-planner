@@ -135,7 +135,6 @@ h2 {
 .large-plan-card,
 .detail-row {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 14px;
   width: 100%;
@@ -147,6 +146,7 @@ h2 {
 }
 
 .large-plan-card {
+  grid-template-columns: auto minmax(0, 1fr) auto;
   min-height: 112px;
   padding: 18px;
   transition:
@@ -231,6 +231,7 @@ h2 {
 }
 
 .detail-row {
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
   min-height: 64px;
   padding: 14px 16px;
 }
@@ -283,16 +284,48 @@ h2 {
   margin-bottom: 18px;
 }
 
-.create-plan-form {
+.create-plan-form,
+.add-detail-form {
   display: grid;
   gap: 10px;
   margin-bottom: 18px;
 }
 
-.create-plan-form label {
+.create-plan-form label,
+.add-detail-form label,
+.status-control label {
   color: rgba(255, 255, 255, 0.72);
   font-size: 0.86rem;
   font-weight: 800;
+}
+
+.status-control {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+}
+
+.status-control label {
+  display: grid;
+  gap: 6px;
+}
+
+.status-select {
+  min-height: 38px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 0 34px 0 12px;
+  background: rgba(10, 13, 58, 0.72);
+  color: #ffffff;
+  font: inherit;
+  font-weight: 800;
+  outline: none;
+}
+
+.status-select:focus {
+  border-color: #5865f2;
 }
 
 .input-row {
@@ -370,6 +403,10 @@ h2 {
   .large-plan-card,
   .detail-row {
     grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .detail-row {
+    grid-template-columns: minmax(0, 1fr) auto auto;
   }
 
   .large-plan-card .drag-icon,
