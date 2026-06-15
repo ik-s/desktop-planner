@@ -7,6 +7,8 @@ import {
   addLargePlan,
   addPlanToDate,
   createInitialState,
+  reorderDailyEntries,
+  reorderDetailItems,
   updateDailyEntryStatus,
   updateDetailItemStatus
 } from "./model/plannerModel";
@@ -99,6 +101,15 @@ export default function App({ storage = defaultStorage }: { storage?: PlannerSto
     setPlannerState((current) => updateDetailItemStatus(current, todayKey, entryId, itemId, status, nowIso()));
   };
 
+  const handleReorderDailyEntries = (activeId: string, overId: string) => {
+    setPlannerState((current) => reorderDailyEntries(current, todayKey, activeId, overId));
+  };
+
+  const handleReorderDetailItems = (activeId: string, overId: string) => {
+    if (!selectedEntryId) return;
+    setPlannerState((current) => reorderDetailItems(current, todayKey, selectedEntryId, activeId, overId));
+  };
+
   return (
     <main className="app-shell" aria-label="데스크톱 데일리 플래너">
       <div className="planner-layout">
@@ -111,6 +122,7 @@ export default function App({ storage = defaultStorage }: { storage?: PlannerSto
             onAddDetailItem={handleAddDetailItem}
             onEntryStatusChange={handleDailyEntryStatusChange}
             onDetailItemStatusChange={handleDetailItemStatusChange}
+            onReorderDetailItems={handleReorderDetailItems}
           />
         ) : (
           <TodayPlannerView
@@ -119,6 +131,7 @@ export default function App({ storage = defaultStorage }: { storage?: PlannerSto
             plansById={plansById}
             onOpenEntry={setSelectedEntryId}
             onAddPlanToToday={handleAddPlanToToday}
+            onReorderDailyEntries={handleReorderDailyEntries}
           />
         )}
 

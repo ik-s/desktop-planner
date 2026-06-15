@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App, { formatDateKey } from "./App";
 import { PlanDetailView } from "./components/PlanDetailView";
+import { TodayPlannerView } from "./components/TodayPlannerView";
 import type { DailyPlanEntry, LargePlan, PlannerState } from "./model/types";
 import type { PlannerStorage } from "./storage/plannerStorage";
 
@@ -63,6 +64,7 @@ describe("PlanDetailView", () => {
         onAddDetailItem={vi.fn()}
         onEntryStatusChange={vi.fn()}
         onDetailItemStatusChange={vi.fn()}
+        onReorderDetailItems={vi.fn()}
       />
     );
 
@@ -74,6 +76,124 @@ describe("PlanDetailView", () => {
     fireEvent.change(detailInput!, { target: { value: "   " } });
 
     expect(submitButton).toHaveProperty("disabled", true);
+  });
+
+  it("renders detail item drag handles without replacing status controls", () => {
+    const entry: DailyPlanEntry = {
+      id: "entry-1",
+      date: "2026-06-15",
+      largePlanId: "plan-1",
+      order: 0,
+      status: "waiting",
+      detailItems: [
+        {
+          id: "item-1",
+          title: "First detail",
+          order: 0,
+          status: "waiting",
+          createdAt: "2026-06-15T00:00:00.000Z",
+          updatedAt: "2026-06-15T00:00:00.000Z"
+        },
+        {
+          id: "item-2",
+          title: "Second detail",
+          order: 1,
+          status: "done",
+          createdAt: "2026-06-15T00:00:00.000Z",
+          updatedAt: "2026-06-15T00:00:00.000Z"
+        }
+      ],
+      createdAt: "2026-06-15T00:00:00.000Z",
+      updatedAt: "2026-06-15T00:00:00.000Z"
+    };
+    const plan: LargePlan = {
+      id: "plan-1",
+      title: "Focus Plan",
+      createdAt: "2026-06-15T00:00:00.000Z",
+      updatedAt: "2026-06-15T00:00:00.000Z"
+    };
+
+    render(
+      <PlanDetailView
+        date="2026-06-15"
+        entry={entry}
+        plan={plan}
+        onBack={vi.fn()}
+        onAddDetailItem={vi.fn()}
+        onEntryStatusChange={vi.fn()}
+        onDetailItemStatusChange={vi.fn()}
+        onReorderDetailItems={vi.fn()}
+      />
+    );
+
+    expect(screen.getAllByRole("button", { name: "세부 항목 순서 변경" })).toHaveLength(2);
+    expect(screen.getByLabelText("First detail 상태")).toHaveProperty("value", "waiting");
+    expect(screen.getByLabelText("Second detail 상태")).toHaveProperty("value", "done");
+  });
+});
+
+describe("TodayPlannerView", () => {
+  it("renders card drag handles while preserving card click navigation", () => {
+    const entries: DailyPlanEntry[] = [
+      {
+        id: "entry-1",
+        date: "2026-06-15",
+        largePlanId: "plan-1",
+        order: 0,
+        status: "waiting",
+        detailItems: [],
+        createdAt: "2026-06-15T00:00:00.000Z",
+        updatedAt: "2026-06-15T00:00:00.000Z"
+      },
+      {
+        id: "entry-2",
+        date: "2026-06-15",
+        largePlanId: "plan-2",
+        order: 1,
+        status: "in_progress",
+        detailItems: [],
+        createdAt: "2026-06-15T00:00:00.000Z",
+        updatedAt: "2026-06-15T00:00:00.000Z"
+      }
+    ];
+    const plansById = new Map<string, LargePlan>([
+      [
+        "plan-1",
+        {
+          id: "plan-1",
+          title: "First plan",
+          createdAt: "2026-06-15T00:00:00.000Z",
+          updatedAt: "2026-06-15T00:00:00.000Z"
+        }
+      ],
+      [
+        "plan-2",
+        {
+          id: "plan-2",
+          title: "Second plan",
+          createdAt: "2026-06-15T00:00:00.000Z",
+          updatedAt: "2026-06-15T00:00:00.000Z"
+        }
+      ]
+    ]);
+    const onOpenEntry = vi.fn();
+
+    render(
+      <TodayPlannerView
+        date="2026-06-15"
+        entries={entries}
+        plansById={plansById}
+        onOpenEntry={onOpenEntry}
+        onAddPlanToToday={vi.fn()}
+        onReorderDailyEntries={vi.fn()}
+      />
+    );
+
+    expect(screen.getAllByRole("button", { name: "순서 변경" })).toHaveLength(2);
+
+    fireEvent.click(screen.getByRole("button", { name: /First plan/ }));
+
+    expect(onOpenEntry).toHaveBeenCalledWith("entry-1");
   });
 });
 

@@ -1,3 +1,13 @@
+import {
+  closestCenter,
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent
+} from "@dnd-kit/core";
+import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { ArrowLeft, Plus } from "lucide-react";
 import { FormEvent, useState } from "react";
 import type { DailyPlanEntry, LargePlan, PlannerStatus } from "../model/types";
@@ -11,15 +21,7 @@ const statusOptions: { value: PlannerStatus; label: string }[] = [
   { value: "done", label: "완료" }
 ];
 
-export function PlanDetailView({
-  date,
-  entry,
-  plan,
-  onBack,
-  onAddDetailItem,
-  onEntryStatusChange,
-  onDetailItemStatusChange
-}: {
+export type PlanDetailViewProps = {
   date: string;
   entry: DailyPlanEntry;
   plan: LargePlan;
@@ -27,9 +29,27 @@ export function PlanDetailView({
   onAddDetailItem(entryId: string, title: string): void;
   onEntryStatusChange(entryId: string, status: PlannerStatus): void;
   onDetailItemStatusChange(entryId: string, itemId: string, status: PlannerStatus): void;
-}) {
+  onReorderDetailItems(activeId: string, overId: string): void;
+};
+
+export function PlanDetailView({
+  date,
+  entry,
+  plan,
+  onBack,
+  onAddDetailItem,
+  onEntryStatusChange,
+  onDetailItemStatusChange,
+  onReorderDetailItems
+}: PlanDetailViewProps) {
   const [detailTitle, setDetailTitle] = useState("");
   const canSubmitDetail = detailTitle.trim().length > 0;
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates
+    })
+  );
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -37,6 +57,12 @@ export function PlanDetailView({
     if (!trimmedTitle) return;
     onAddDetailItem(entry.id, trimmedTitle);
     setDetailTitle("");
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    onReorderDetailItems(String(active.id), String(over.id));
   };
 
   return (
@@ -86,19 +112,25 @@ export function PlanDetailView({
         </div>
       </form>
 
-      <div className="detail-list">
-        {entry.detailItems.length > 0 ? (
-          entry.detailItems.map((item) => (
-            <DetailItemRow
-              key={item.id}
-              item={item}
-              onStatusChange={(itemId, status) => onDetailItemStatusChange(entry.id, itemId, status)}
-            />
-          ))
-        ) : (
+      {entry.detailItems.length > 0 ? (
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={entry.detailItems.map((item) => item.id)} strategy={verticalListSortingStrategy}>
+            <div className="detail-list">
+              {entry.detailItems.map((item) => (
+                <DetailItemRow
+                  key={item.id}
+                  item={item}
+                  onStatusChange={(itemId, status) => onDetailItemStatusChange(entry.id, itemId, status)}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
+      ) : (
+        <div className="detail-list">
           <EmptyState title="세부 항목이 없습니다" action="이 계획을 실행할 작은 단계를 추가해 보세요." />
-        )}
-      </div>
+        </div>
+      )}
     </section>
   );
 }
