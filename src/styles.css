@@ -139,6 +139,44 @@ h2 {
   max-width: 380px;
 }
 
+.planner-heading-actions {
+  display: grid;
+  justify-items: end;
+  gap: 10px;
+  min-width: min(100%, 420px);
+}
+
+.date-navigation {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: end;
+  gap: 8px;
+}
+
+.date-picker {
+  display: grid;
+  gap: 6px;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.date-picker input {
+  min-width: 152px;
+  height: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 0 10px;
+  background: rgba(10, 13, 58, 0.72);
+  color: #ffffff;
+  outline: none;
+}
+
+.date-picker input:focus {
+  border-color: #5865f2;
+}
+
 .entry-stack,
 .detail-list,
 .library-list {
@@ -442,6 +480,12 @@ h2 {
   .quick-add {
     justify-content: flex-start;
     max-width: none;
+  }
+
+  .planner-heading-actions,
+  .date-navigation {
+    justify-items: start;
+    justify-content: flex-start;
   }
 }
 

@@ -187,6 +187,10 @@ describe("TodayPlannerView", () => {
         onOpenEntry={onOpenEntry}
         onAddPlanToToday={vi.fn()}
         onReorderDailyEntries={vi.fn()}
+        onDateChange={vi.fn()}
+        onPreviousDate={vi.fn()}
+        onNextDate={vi.fn()}
+        onTodayDate={vi.fn()}
       />
     );
 
@@ -206,6 +210,49 @@ describe("App planner persistence", () => {
 
   afterEach(() => {
     localStorage.clear();
+    vi.useRealTimers();
+  });
+
+  const shiftDateKey = (dateKey: string, dayOffset: number) => {
+    const [year, month, day] = dateKey.split("-").map(Number);
+    const date = new Date(year, month - 1, day);
+    date.setDate(date.getDate() + dayOffset);
+    return formatDateKey(date);
+  };
+
+  it("keeps entries and detail items isolated by selected date and restores past days", async () => {
+    render(<App />);
+
+    const dateInput = (await screen.findByLabelText("날짜 선택")) as HTMLInputElement;
+    const originalDateKey = dateInput.value;
+    const otherDateKey = shiftDateKey(originalDateKey, -1);
+
+    expect(screen.getByRole("button", { name: "이전 날" })).not.toBeNull();
+    expect(screen.getByRole("button", { name: "다음 날" })).not.toBeNull();
+    expect(screen.getByRole("button", { name: "오늘" })).not.toBeNull();
+
+    fireEvent.change(screen.getByLabelText("새 큰 계획"), { target: { value: "테스트 계획" } });
+    fireEvent.click(screen.getByRole("button", { name: "큰 계획 만들기" }));
+    fireEvent.click(await screen.findByRole("button", { name: "오늘 추가" }));
+
+    fireEvent.click(document.querySelector<HTMLButtonElement>(".large-plan-card__open")!);
+    fireEvent.change(document.querySelector<HTMLInputElement>("#detail-item-title")!, {
+      target: { value: "첫 번째 세부 항목" }
+    });
+    fireEvent.click(document.querySelector<HTMLButtonElement>(".add-detail-form button[type='submit']")!);
+    expect(await screen.findByText("첫 번째 세부 항목")).not.toBeNull();
+
+    fireEvent.click(document.querySelector<HTMLButtonElement>(".back-button")!);
+    fireEvent.change(screen.getByLabelText("날짜 선택"), { target: { value: otherDateKey } });
+
+    expect(document.querySelector<HTMLButtonElement>(".large-plan-card__open")).toBeNull();
+    expect(screen.queryByText("첫 번째 세부 항목")).toBeNull();
+
+    fireEvent.change(screen.getByLabelText("날짜 선택"), { target: { value: originalDateKey } });
+
+    expect(document.querySelector<HTMLButtonElement>(".large-plan-card__open")).not.toBeNull();
+    fireEvent.click(document.querySelector<HTMLButtonElement>(".large-plan-card__open")!);
+    expect(await screen.findByText("첫 번째 세부 항목")).not.toBeNull();
   });
 
   it("starts empty, wires real planner actions, and reloads persisted state", async () => {

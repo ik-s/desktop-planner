@@ -19,6 +19,10 @@ export type TodayPlannerViewProps = {
   onOpenEntry(entryId: string): void;
   onAddPlanToToday(planId: string): void;
   onReorderDailyEntries(activeId: string, overId: string): void;
+  onDateChange(date: string): void;
+  onPreviousDate(): void;
+  onNextDate(): void;
+  onTodayDate(): void;
 };
 
 const formatPlannerDate = (date: string) =>
@@ -34,7 +38,11 @@ export function TodayPlannerView({
   plansById,
   onOpenEntry,
   onAddPlanToToday,
-  onReorderDailyEntries
+  onReorderDailyEntries,
+  onDateChange,
+  onPreviousDate,
+  onNextDate,
+  onTodayDate
 }: TodayPlannerViewProps) {
   const addedPlanIds = new Set(entries.map((entry) => entry.largePlanId));
   const availablePlans = [...plansById.values()].filter((plan) => !addedPlanIds.has(plan.id));
@@ -58,12 +66,40 @@ export function TodayPlannerView({
           <span className="eyebrow">오늘의 플래너</span>
           <h1 id="today-title">{formatPlannerDate(date)}</h1>
         </div>
-        <div className="quick-add" aria-label="오늘에 큰 계획 추가">
-          {availablePlans.slice(0, 2).map((plan) => (
-            <button key={plan.id} className="button button--soft" type="button" onClick={() => onAddPlanToToday(plan.id)}>
-              + {plan.title}
+        <div className="planner-heading-actions">
+          <div className="date-navigation" aria-label="날짜 탐색">
+            <button className="button button--ghost" type="button" onClick={onPreviousDate}>
+              이전 날
             </button>
-          ))}
+            <label className="date-picker">
+              <span>날짜 선택</span>
+              <input
+                type="date"
+                value={date}
+                onChange={(event) => {
+                  if (event.target.value) onDateChange(event.target.value);
+                }}
+              />
+            </label>
+            <button className="button button--ghost" type="button" onClick={onNextDate}>
+              다음 날
+            </button>
+            <button className="button button--soft" type="button" onClick={onTodayDate}>
+              오늘
+            </button>
+          </div>
+          <div className="quick-add" aria-label="오늘에 큰 계획 추가">
+            {availablePlans.slice(0, 2).map((plan) => (
+              <button
+                key={plan.id}
+                className="button button--soft"
+                type="button"
+                onClick={() => onAddPlanToToday(plan.id)}
+              >
+                + {plan.title}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

@@ -30,11 +30,18 @@ const getPlansById = (plans: LargePlan[]) => new Map(plans.map((plan) => [plan.i
 
 const nowIso = () => new Date().toISOString();
 
+const shiftDateKey = (dateKey: string, dayOffset: number) => {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+  date.setDate(date.getDate() + dayOffset);
+  return formatDateKey(date);
+};
+
 export default function App({ storage = defaultStorage }: { storage?: PlannerStorage }) {
   const [plannerState, setPlannerState] = useState<PlannerState>(() => createInitialState());
   const [isLoaded, setIsLoaded] = useState(false);
   const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
-  const todayKey = useMemo(() => getTodayKey(), []);
+  const [selectedDateKey, setSelectedDateKey] = useState(() => getTodayKey());
 
   useEffect(() => {
     let isActive = true;
@@ -55,17 +62,22 @@ export default function App({ storage = defaultStorage }: { storage?: PlannerSto
     void storage.saveState(plannerState);
   }, [isLoaded, plannerState]);
 
-  const todayEntries = plannerState.dailyEntries[todayKey] ?? [];
+  const selectedDateEntries = plannerState.dailyEntries[selectedDateKey] ?? [];
   const plansById = useMemo(() => getPlansById(plannerState.largePlans), [plannerState.largePlans]);
-  const todayPlanIds = useMemo(() => new Set(todayEntries.map((entry) => entry.largePlanId)), [todayEntries]);
-  const selectedEntry = selectedEntryId ? todayEntries.find((entry) => entry.id === selectedEntryId) : undefined;
+  const selectedDatePlanIds = useMemo(
+    () => new Set(selectedDateEntries.map((entry) => entry.largePlanId)),
+    [selectedDateEntries]
+  );
+  const selectedEntry = selectedEntryId
+    ? selectedDateEntries.find((entry) => entry.id === selectedEntryId)
+    : undefined;
   const selectedPlan = selectedEntry ? plansById.get(selectedEntry.largePlanId) : undefined;
 
   useEffect(() => {
-    if (selectedEntryId && !todayEntries.some((entry) => entry.id === selectedEntryId)) {
+    if (selectedEntryId && !selectedDateEntries.some((entry) => entry.id === selectedEntryId)) {
       setSelectedEntryId(null);
     }
-  }, [selectedEntryId, todayEntries]);
+  }, [selectedEntryId, selectedDateEntries]);
 
   if (!isLoaded) {
     return (
@@ -86,28 +98,40 @@ export default function App({ storage = defaultStorage }: { storage?: PlannerSto
   };
 
   const handleAddPlanToToday = (planId: string) => {
-    setPlannerState((current) => addPlanToDate(current, todayKey, planId, nowIso()));
+    setPlannerState((current) => addPlanToDate(current, selectedDateKey, planId, nowIso()));
   };
 
   const handleAddDetailItem = (entryId: string, title: string) => {
-    setPlannerState((current) => addDetailItem(current, todayKey, entryId, title, nowIso()));
+    setPlannerState((current) => addDetailItem(current, selectedDateKey, entryId, title, nowIso()));
   };
 
   const handleDailyEntryStatusChange = (entryId: string, status: PlannerStatus) => {
-    setPlannerState((current) => updateDailyEntryStatus(current, todayKey, entryId, status, nowIso()));
+    setPlannerState((current) => updateDailyEntryStatus(current, selectedDateKey, entryId, status, nowIso()));
   };
 
   const handleDetailItemStatusChange = (entryId: string, itemId: string, status: PlannerStatus) => {
-    setPlannerState((current) => updateDetailItemStatus(current, todayKey, entryId, itemId, status, nowIso()));
+    setPlannerState((current) => updateDetailItemStatus(current, selectedDateKey, entryId, itemId, status, nowIso()));
   };
 
   const handleReorderDailyEntries = (activeId: string, overId: string) => {
-    setPlannerState((current) => reorderDailyEntries(current, todayKey, activeId, overId));
+    setPlannerState((current) => reorderDailyEntries(current, selectedDateKey, activeId, overId));
   };
 
   const handleReorderDetailItems = (activeId: string, overId: string) => {
     if (!selectedEntryId) return;
-    setPlannerState((current) => reorderDetailItems(current, todayKey, selectedEntryId, activeId, overId));
+    setPlannerState((current) => reorderDetailItems(current, selectedDateKey, selectedEntryId, activeId, overId));
+  };
+
+  const handlePreviousDate = () => {
+    setSelectedDateKey((current) => shiftDateKey(current, -1));
+  };
+
+  const handleNextDate = () => {
+    setSelectedDateKey((current) => shiftDateKey(current, 1));
+  };
+
+  const handleTodayDate = () => {
+    setSelectedDateKey(getTodayKey());
   };
 
   return (
@@ -115,7 +139,7 @@ export default function App({ storage = defaultStorage }: { storage?: PlannerSto
       <div className="planner-layout">
         {selectedEntry && selectedPlan ? (
           <PlanDetailView
-            date={todayKey}
+            date={selectedDateKey}
             entry={selectedEntry}
             plan={selectedPlan}
             onBack={() => setSelectedEntryId(null)}
@@ -126,18 +150,22 @@ export default function App({ storage = defaultStorage }: { storage?: PlannerSto
           />
         ) : (
           <TodayPlannerView
-            date={todayKey}
-            entries={todayEntries}
+            date={selectedDateKey}
+            entries={selectedDateEntries}
             plansById={plansById}
             onOpenEntry={setSelectedEntryId}
             onAddPlanToToday={handleAddPlanToToday}
             onReorderDailyEntries={handleReorderDailyEntries}
+            onDateChange={setSelectedDateKey}
+            onPreviousDate={handlePreviousDate}
+            onNextDate={handleNextDate}
+            onTodayDate={handleTodayDate}
           />
         )}
 
         <PlanLibraryPanel
           plans={plannerState.largePlans}
-          todayPlanIds={todayPlanIds}
+          todayPlanIds={selectedDatePlanIds}
           onCreatePlan={handleCreatePlan}
           onAddPlanToToday={handleAddPlanToToday}
         />
