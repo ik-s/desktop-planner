@@ -12,7 +12,7 @@ export function LargePlanCard({ entry, plan, onOpen }: { entry: DailyPlanEntry; 
 
   return (
     <div ref={setNodeRef} className="large-plan-card" style={style}>
-      <button className="drag-handle" type="button" aria-label="순서 변경" {...attributes} {...listeners}>
+      <button className="drag-handle" type="button" aria-label={`${plan.title} 순서 변경`} {...attributes} {...listeners}>
         <GripVertical className="drag-icon" size={20} aria-hidden />
       </button>
       <button className="large-plan-card__open" type="button" onClick={onOpen}>

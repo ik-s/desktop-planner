@@ -22,7 +22,7 @@ export function DetailItemRow({
 
   return (
     <div ref={setNodeRef} className="detail-row" style={style}>
-      <button className="drag-handle" type="button" aria-label="세부 항목 순서 변경" {...attributes} {...listeners}>
+      <button className="drag-handle" type="button" aria-label={`${item.title} 세부 항목 순서 변경`} {...attributes} {...listeners}>
         <GripVertical className="drag-icon" size={20} aria-hidden />
       </button>
       <strong>{item.title}</strong>

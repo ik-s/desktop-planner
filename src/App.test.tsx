@@ -126,7 +126,8 @@ describe("PlanDetailView", () => {
       />
     );
 
-    expect(screen.getAllByRole("button", { name: "세부 항목 순서 변경" })).toHaveLength(2);
+    expect(screen.getByRole("button", { name: "First detail 세부 항목 순서 변경" })).not.toBeNull();
+    expect(screen.getByRole("button", { name: "Second detail 세부 항목 순서 변경" })).not.toBeNull();
     expect(screen.getByLabelText("First detail 상태")).toHaveProperty("value", "waiting");
     expect(screen.getByLabelText("Second detail 상태")).toHaveProperty("value", "done");
   });
@@ -189,9 +190,10 @@ describe("TodayPlannerView", () => {
       />
     );
 
-    expect(screen.getAllByRole("button", { name: "순서 변경" })).toHaveLength(2);
+    expect(screen.getByRole("button", { name: "First plan 순서 변경" })).not.toBeNull();
+    expect(screen.getByRole("button", { name: "Second plan 순서 변경" })).not.toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: /First plan/ }));
+    fireEvent.click(screen.getByRole("button", { name: "First plan 대기" }));
 
     expect(onOpenEntry).toHaveBeenCalledWith("entry-1");
   });
@@ -216,7 +218,7 @@ describe("App planner persistence", () => {
     fireEvent.click(screen.getByRole("button", { name: "큰 계획 만들기" }));
     fireEvent.click(screen.getByRole("button", { name: "오늘 추가" }));
 
-    fireEvent.click(screen.getByRole("button", { name: /운동/ }));
+    fireEvent.click(screen.getByRole("button", { name: "운동 대기" }));
 
     fireEvent.change(screen.getByLabelText("계획 상태"), { target: { value: "in_progress" } });
     fireEvent.change(screen.getByLabelText("세부 항목"), { target: { value: "스트레칭" } });
@@ -234,7 +236,7 @@ describe("App planner persistence", () => {
     firstRender.unmount();
     render(<App />);
 
-    fireEvent.click(await screen.findByRole("button", { name: /운동/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /운동.*진행중/ }));
     expect(await screen.findByText("스트레칭")).not.toBeNull();
     expect(screen.getByLabelText("계획 상태")).toHaveProperty("value", "in_progress");
     expect(screen.getByLabelText("스트레칭 상태")).toHaveProperty("value", "done");
