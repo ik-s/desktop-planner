@@ -507,6 +507,64 @@ describe("App planner persistence", () => {
     expect(await screen.findByText("Synced detail")).not.toBeNull();
   });
 
+  it("keeps local detail entries when migrating from legacy server plans", async () => {
+    const dateKey = formatDateKey(new Date());
+    const plan: LargePlan = {
+      id: "plan-rust",
+      title: "Rust",
+      createdAt: "2026-06-28T00:00:00.000Z",
+      updatedAt: "2026-06-28T00:00:00.000Z"
+    };
+    const localState: PlannerState = {
+      largePlans: [plan],
+      dailyEntries: {
+        [dateKey]: [
+          {
+            id: "entry-rust",
+            date: dateKey,
+            largePlanId: plan.id,
+            order: 0,
+            status: "waiting",
+            createdAt: "2026-06-28T00:00:00.000Z",
+            updatedAt: "2026-06-28T00:00:00.000Z",
+            detailItems: [
+              {
+                id: "detail-local",
+                title: "Local detail",
+                order: 0,
+                status: "waiting",
+                createdAt: "2026-06-28T00:00:00.000Z",
+                updatedAt: "2026-06-28T00:00:00.000Z"
+              }
+            ]
+          }
+        ]
+      }
+    };
+    const storage: PlannerStorage = {
+      loadState: vi.fn().mockResolvedValue(localState),
+      saveState: vi.fn().mockResolvedValue(undefined)
+    };
+    const syncClient: PlanSyncClient = {
+      getSession: () => ({ isAuthenticated: true }),
+      login: vi.fn().mockResolvedValue(undefined),
+      logout: vi.fn(),
+      loadState: vi.fn().mockResolvedValue({ largePlans: [plan], dailyEntries: {} }),
+      saveState: vi.fn().mockResolvedValue(undefined),
+      loadPlans: vi.fn().mockResolvedValue([plan]),
+      savePlans: vi.fn().mockResolvedValue(undefined)
+    };
+
+    render(<App storage={storage} syncClient={syncClient} />);
+
+    await waitFor(() => {
+      expect(syncClient.saveState).toHaveBeenCalledWith(localState);
+    });
+    fireEvent.click(document.querySelector<HTMLButtonElement>(".large-plan-card__open")!);
+
+    expect(await screen.findByText("Local detail")).not.toBeNull();
+  });
+
   it("keeps the user logged in when plan loading fails after authentication", async () => {
     const syncClient: PlanSyncClient = {
       getSession: () => ({ isAuthenticated: false }),

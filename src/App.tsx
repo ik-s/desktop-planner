@@ -91,9 +91,16 @@ export default function App({
       const remoteIsEmpty =
         remoteState.largePlans.length === 0 && Object.values(remoteState.dailyEntries).every((entries) => entries.length === 0);
       const currentHasPlans = current.largePlans.length > 0;
+      const remoteHasNoEntries = Object.values(remoteState.dailyEntries).every((entries) => entries.length === 0);
+      const currentHasEntries = Object.values(current.dailyEntries).some((entries) => entries.length > 0);
       if (remoteIsEmpty && currentHasPlans) {
         seedState = current;
         return current;
+      }
+
+      if (remoteState.largePlans.length > 0 && remoteHasNoEntries && currentHasEntries) {
+        seedState = { ...remoteState, dailyEntries: current.dailyEntries };
+        return seedState;
       }
 
       return remoteState;
