@@ -91,7 +91,7 @@ export function TodayPlannerView({
             </button>
           </div>
           <div className="quick-add" aria-label="선택한 날짜에 큰 계획 추가">
-            {availablePlans.slice(0, 2).map((plan) => (
+            {availablePlans.map((plan) => (
               <button
                 key={plan.id}
                 className="button button--soft"

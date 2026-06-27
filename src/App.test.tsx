@@ -208,6 +208,58 @@ describe("TodayPlannerView", () => {
 
     expect(onRemoveEntry).toHaveBeenCalledWith("entry-1");
   });
+
+  it("shows every available large plan in the selected date quick-add area", () => {
+    const entries: DailyPlanEntry[] = [
+      {
+        id: "entry-1",
+        date: "2026-06-15",
+        largePlanId: "plan-1",
+        order: 0,
+        status: "waiting",
+        detailItems: [],
+        createdAt: "2026-06-15T00:00:00.000Z",
+        updatedAt: "2026-06-15T00:00:00.000Z"
+      }
+    ];
+    const plansById = new Map<string, LargePlan>(
+      ["Rust 학습", "헬스", "영어 회화", "De-Buthon"].map((title, index) => [
+        `plan-${index + 1}`,
+        {
+          id: `plan-${index + 1}`,
+          title,
+          createdAt: "2026-06-15T00:00:00.000Z",
+          updatedAt: "2026-06-15T00:00:00.000Z"
+        }
+      ])
+    );
+    const onAddPlanToToday = vi.fn();
+
+    render(
+      <TodayPlannerView
+        date="2026-06-15"
+        entries={entries}
+        plansById={plansById}
+        onOpenEntry={vi.fn()}
+        onRemoveEntry={vi.fn()}
+        onAddPlanToToday={onAddPlanToToday}
+        onReorderDailyEntries={vi.fn()}
+        onDateChange={vi.fn()}
+        onPreviousDate={vi.fn()}
+        onNextDate={vi.fn()}
+        onTodayDate={vi.fn()}
+      />
+    );
+
+    expect(screen.queryByRole("button", { name: "+ Rust 학습" })).toBeNull();
+    expect(screen.getByRole("button", { name: "+ 헬스" })).not.toBeNull();
+    expect(screen.getByRole("button", { name: "+ 영어 회화" })).not.toBeNull();
+    expect(screen.getByRole("button", { name: "+ De-Buthon" })).not.toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "+ De-Buthon" }));
+
+    expect(onAddPlanToToday).toHaveBeenCalledWith("plan-4");
+  });
 });
 
 describe("App planner persistence", () => {
