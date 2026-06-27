@@ -135,8 +135,8 @@ export default function App({
         setSyncMessage("큰 계획이 서버에 저장되어 있습니다.");
       })
       .catch(() => {
-        setSyncStatus("error");
-        setSyncMessage("서버 저장에 실패했습니다. 로컬 저장으로 계속 사용할 수 있습니다.");
+        setSyncStatus("authenticated");
+        setSyncMessage("서버 저장에 실패했습니다. 저장소 설정을 확인하세요.");
       });
   }, [isLoaded, plannerState.largePlans, syncClient, syncStatus]);
 
@@ -185,12 +185,19 @@ export default function App({
 
     try {
       await syncClient.login(username, password);
+    } catch {
+      setSyncStatus("error");
+      setSyncMessage("로그인에 실패했습니다. 로컬 서버 계정과 비밀번호를 확인하세요.");
+      return;
+    }
+
+    try {
       await applyRemotePlans(await syncClient.loadPlans());
       setSyncStatus("authenticated");
       setSyncMessage("큰 계획이 서버에 저장되어 있습니다.");
     } catch {
-      setSyncStatus("error");
-      setSyncMessage("로그인에 실패했습니다. 로컬 서버 계정과 비밀번호를 확인하세요.");
+      setSyncStatus("authenticated");
+      setSyncMessage("서버 저장에 실패했습니다. 저장소 설정을 확인하세요.");
     }
   };
 

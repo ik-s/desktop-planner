@@ -331,6 +331,26 @@ describe("App planner persistence", () => {
     expect(syncClient.login).toHaveBeenCalledWith("me", "secret");
   });
 
+  it("keeps the user logged in when plan loading fails after authentication", async () => {
+    const syncClient: PlanSyncClient = {
+      getSession: () => ({ isAuthenticated: false }),
+      login: vi.fn().mockResolvedValue(undefined),
+      logout: vi.fn(),
+      loadPlans: vi.fn().mockRejectedValue(new Error("storage_missing")),
+      savePlans: vi.fn().mockRejectedValue(new Error("storage_missing"))
+    };
+
+    render(<App syncClient={syncClient} />);
+
+    fireEvent.change(await screen.findByLabelText("아이디"), { target: { value: "me" } });
+    fireEvent.change(screen.getByLabelText("비밀번호"), { target: { value: "secret" } });
+    fireEvent.click(screen.getByRole("button", { name: "로그인" }));
+
+    expect(await screen.findByRole("button", { name: "로그아웃" })).not.toBeNull();
+    expect(await screen.findByRole("button", { name: "큰 계획 만들기" })).not.toBeNull();
+    expect(await screen.findByText("서버 저장에 실패했습니다. 저장소 설정을 확인하세요.")).not.toBeNull();
+  });
+
   it("hides locally persisted large plans until server login succeeds", async () => {
     const localPlan: LargePlan = {
       id: "plan-local",
