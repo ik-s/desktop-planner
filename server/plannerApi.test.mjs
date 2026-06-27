@@ -63,11 +63,61 @@ describe("planner API handlers", () => {
     const loadResponse = createMockResponse();
     await handler({ method: "GET", headers }, loadResponse);
     expect(loadResponse.status).toHaveBeenCalledWith(200);
-    expect(loadResponse.body).toEqual({ plans });
+    expect(loadResponse.body).toEqual({ state: { largePlans: plans, dailyEntries: {} }, plans });
 
     const saveResponse = createMockResponse();
     await handler({ method: "PUT", headers, body: { plans } }, saveResponse);
     expect(store.savePlans).toHaveBeenCalledWith(plans);
+    expect(saveResponse.status).toHaveBeenCalledWith(200);
+    expect(saveResponse.body).toEqual({ state: { largePlans: plans, dailyEntries: {} }, plans });
+  });
+
+  it("loads and saves full planner state for authenticated requests", async () => {
+    const state = {
+      largePlans: [
+        {
+          id: "plan-rust",
+          title: "Rust",
+          createdAt: "2026-06-28T00:00:00.000Z",
+          updatedAt: "2026-06-28T00:00:00.000Z"
+        }
+      ],
+      dailyEntries: {
+        "2026-06-28": [
+          {
+            id: "entry-rust",
+            date: "2026-06-28",
+            largePlanId: "plan-rust",
+            order: 0,
+            status: "waiting",
+            createdAt: "2026-06-28T00:00:00.000Z",
+            updatedAt: "2026-06-28T00:00:00.000Z",
+            detailItems: [
+              {
+                id: "detail-rust",
+                title: "Rust lesson",
+                order: 0,
+                status: "done",
+                createdAt: "2026-06-28T00:00:00.000Z",
+                updatedAt: "2026-06-28T00:00:00.000Z"
+              }
+            ]
+          }
+        ]
+      }
+    };
+    const store = { loadState: vi.fn().mockResolvedValue(state), saveState: vi.fn().mockResolvedValue(undefined) };
+    const handler = createPlansHandler({ username: "me", password: "secret", store });
+    const headers = { authorization: `Bearer ${makeToken("me", "secret")}` };
+
+    const loadResponse = createMockResponse();
+    await handler({ method: "GET", headers }, loadResponse);
+    expect(loadResponse.status).toHaveBeenCalledWith(200);
+    expect(loadResponse.body).toEqual({ state, plans: state.largePlans });
+
+    const saveResponse = createMockResponse();
+    await handler({ method: "PUT", headers, body: { state } }, saveResponse);
+    expect(store.saveState).toHaveBeenCalledWith(state);
     expect(saveResponse.status).toHaveBeenCalledWith(200);
   });
 });

@@ -94,7 +94,64 @@ describe("planner server", () => {
       headers: { authorization: `Bearer ${token}` }
     });
     expect(load.status).toBe(200);
-    await expect(load.json()).resolves.toEqual({ plans });
+    await expect(load.json()).resolves.toEqual({ state: { largePlans: plans, dailyEntries: {} }, plans });
+  });
+
+  test("stores full planner state for authenticated requests", async () => {
+    const baseUrl = await startServer();
+    const login = await fetch(`${baseUrl}/api/login`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ username: "me", password: "secret" })
+    });
+    const { token } = await login.json();
+
+    const state = {
+      largePlans: [
+        {
+          id: "plan-rust",
+          title: "Rust",
+          createdAt: "2026-06-28T00:00:00.000Z",
+          updatedAt: "2026-06-28T00:00:00.000Z"
+        }
+      ],
+      dailyEntries: {
+        "2026-06-28": [
+          {
+            id: "entry-rust",
+            date: "2026-06-28",
+            largePlanId: "plan-rust",
+            order: 0,
+            status: "waiting",
+            createdAt: "2026-06-28T00:00:00.000Z",
+            updatedAt: "2026-06-28T00:00:00.000Z",
+            detailItems: [
+              {
+                id: "detail-rust",
+                title: "Rust lesson",
+                order: 0,
+                status: "done",
+                createdAt: "2026-06-28T00:00:00.000Z",
+                updatedAt: "2026-06-28T00:00:00.000Z"
+              }
+            ]
+          }
+        ]
+      }
+    };
+
+    const save = await fetch(`${baseUrl}/api/plans`, {
+      method: "PUT",
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify({ state })
+    });
+    expect(save.status).toBe(200);
+
+    const load = await fetch(`${baseUrl}/api/plans`, {
+      headers: { authorization: `Bearer ${token}` }
+    });
+    expect(load.status).toBe(200);
+    await expect(load.json()).resolves.toEqual({ state, plans: state.largePlans });
   });
 
   test("blocks unauthenticated plan reads and writes", async () => {

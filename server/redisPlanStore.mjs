@@ -1,4 +1,4 @@
-import { isLargePlan, isRecord } from "./plannerApi.mjs";
+import { isLargePlan, isPlannerState, isRecord } from "./plannerApi.mjs";
 
 const DEFAULT_REDIS_KEY = "desktop-planner:large-plans";
 
@@ -25,18 +25,29 @@ export const createRedisPlanStore = ({
   };
 
   return {
-    async loadPlans() {
+    async loadState() {
       const result = await command(["GET", key]);
-      if (!result) return [];
+      if (!result) return { largePlans: [], dailyEntries: {} };
       const parsed = JSON.parse(result);
-      if (!isRecord(parsed) || !Array.isArray(parsed.plans) || !parsed.plans.every(isLargePlan)) {
-        return [];
+      if (isRecord(parsed) && isPlannerState(parsed.state)) {
+        return parsed.state;
       }
-      return parsed.plans;
+      if (isRecord(parsed) && Array.isArray(parsed.plans) && parsed.plans.every(isLargePlan)) {
+        return { largePlans: parsed.plans, dailyEntries: {} };
+      }
+      return { largePlans: [], dailyEntries: {} };
+    },
+
+    async saveState(state) {
+      await command(["SET", key, JSON.stringify({ state })]);
+    },
+
+    async loadPlans() {
+      return (await this.loadState()).largePlans;
     },
 
     async savePlans(plans) {
-      await command(["SET", key, JSON.stringify({ plans })]);
+      await this.saveState({ largePlans: plans, dailyEntries: {} });
     }
   };
 };

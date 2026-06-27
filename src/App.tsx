@@ -8,13 +8,15 @@ import {
   addLargePlan,
   addPlanToDate,
   createInitialState,
+  removeDetailItem,
   removeLargePlan,
   removeDailyEntry,
   reorderDailyEntries,
   reorderDetailItems,
   updateLargePlanTitle,
   updateDailyEntryStatus,
-  updateDetailItemStatus
+  updateDetailItemStatus,
+  updateDetailItemTitle
 } from "./model/plannerModel";
 import type { LargePlan, PlannerState, PlannerStatus } from "./model/types";
 import { createLocalPlannerStorage, type PlannerStorage } from "./storage/plannerStorage";
@@ -82,20 +84,23 @@ export default function App({
     void storage.saveState(plannerState);
   }, [isLoaded, plannerState]);
 
-  const applyRemotePlans = async (remotePlans: LargePlan[]) => {
-    let seedPlans: LargePlan[] | null = null;
+  const applyRemoteState = async (remoteState: PlannerState) => {
+    let seedState: PlannerState | null = null;
 
     setPlannerState((current) => {
-      if (remotePlans.length === 0 && current.largePlans.length > 0) {
-        seedPlans = current.largePlans;
+      const remoteIsEmpty =
+        remoteState.largePlans.length === 0 && Object.values(remoteState.dailyEntries).every((entries) => entries.length === 0);
+      const currentHasPlans = current.largePlans.length > 0;
+      if (remoteIsEmpty && currentHasPlans) {
+        seedState = current;
         return current;
       }
 
-      return { ...current, largePlans: remotePlans };
+      return remoteState;
     });
 
-    if (seedPlans) {
-      await syncClient.savePlans(seedPlans);
+    if (seedState) {
+      await syncClient.saveState(seedState);
     }
   };
 
@@ -107,10 +112,10 @@ export default function App({
     setSyncMessage("서버 계획을 불러오는 중입니다.");
 
     syncClient
-      .loadPlans()
-      .then(async (plans) => {
+      .loadState()
+      .then(async (state) => {
         if (!isActive) return;
-        await applyRemotePlans(plans);
+        await applyRemoteState(state);
         if (!isActive) return;
         setSyncStatus("authenticated");
         setSyncMessage("큰 계획을 서버에 저장 중입니다.");
@@ -130,7 +135,7 @@ export default function App({
     if (!isLoaded || syncStatus !== "authenticated") return;
 
     syncClient
-      .savePlans(plannerState.largePlans)
+      .saveState(plannerState)
       .then(() => {
         setSyncMessage("큰 계획이 서버에 저장되어 있습니다.");
       })
@@ -138,7 +143,40 @@ export default function App({
         setSyncStatus("authenticated");
         setSyncMessage("서버 저장에 실패했습니다. 저장소 설정을 확인하세요.");
       });
-  }, [isLoaded, plannerState.largePlans, syncClient, syncStatus]);
+  }, [isLoaded, plannerState, syncClient, syncStatus]);
+
+  useEffect(() => {
+    if (!isLoaded || syncStatus !== "authenticated") return;
+    let isActive = true;
+
+    const refreshRemoteState = () => {
+      syncClient
+        .loadState()
+        .then(async (state) => {
+          if (!isActive) return;
+          await applyRemoteState(state);
+          if (!isActive) return;
+          setSyncMessage("큰 계획이 서버에 저장되어 있습니다.");
+        })
+        .catch(() => {
+          if (!isActive) return;
+          setSyncMessage("서버 동기화 새로고침에 실패했습니다.");
+        });
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") refreshRemoteState();
+    };
+
+    window.addEventListener("focus", refreshRemoteState);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      isActive = false;
+      window.removeEventListener("focus", refreshRemoteState);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [isLoaded, syncClient, syncStatus]);
 
   const selectedDateEntries = plannerState.dailyEntries[selectedDateKey] ?? [];
   const plansById = useMemo(() => getPlansById(plannerState.largePlans), [plannerState.largePlans]);
@@ -192,7 +230,7 @@ export default function App({
     }
 
     try {
-      await applyRemotePlans(await syncClient.loadPlans());
+      await applyRemoteState(await syncClient.loadState());
       setSyncStatus("authenticated");
       setSyncMessage("큰 계획이 서버에 저장되어 있습니다.");
     } catch {
@@ -221,6 +259,14 @@ export default function App({
 
   const handleDetailItemStatusChange = (entryId: string, itemId: string, status: PlannerStatus) => {
     setPlannerState((current) => updateDetailItemStatus(current, selectedDateKey, entryId, itemId, status, nowIso()));
+  };
+
+  const handleDetailItemTitleChange = (entryId: string, itemId: string, title: string) => {
+    setPlannerState((current) => updateDetailItemTitle(current, selectedDateKey, entryId, itemId, title, nowIso()));
+  };
+
+  const handleRemoveDetailItem = (entryId: string, itemId: string) => {
+    setPlannerState((current) => removeDetailItem(current, selectedDateKey, entryId, itemId, nowIso()));
   };
 
   const handleReorderDailyEntries = (activeId: string, overId: string) => {
@@ -260,6 +306,8 @@ export default function App({
             onAddDetailItem={handleAddDetailItem}
             onEntryStatusChange={handleDailyEntryStatusChange}
             onDetailItemStatusChange={handleDetailItemStatusChange}
+            onDetailItemTitleChange={handleDetailItemTitleChange}
+            onRemoveDetailItem={handleRemoveDetailItem}
             onReorderDetailItems={handleReorderDetailItems}
           />
         ) : (

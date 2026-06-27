@@ -6,9 +6,11 @@ import {
   createInitialState,
   reorderDailyEntries,
   reorderDetailItems,
+  removeDetailItem,
   removeDailyEntry,
   updateDailyEntryStatus,
   updateDetailItemStatus,
+  updateDetailItemTitle,
   removeLargePlan,
   updateLargePlanTitle
 } from "./plannerModel";
@@ -189,6 +191,40 @@ describe("plannerModel", () => {
     state = updateDetailItemStatus(state, "2026-06-15", entryId, itemId, "done", "2026-06-15T00:04:00.000Z");
     expect(state.dailyEntries["2026-06-15"][0].status).toBe("in_progress");
     expect(state.dailyEntries["2026-06-15"][0].detailItems[0].status).toBe("done");
+  });
+
+  it("renames a detail item inside one selected date entry", () => {
+    let state = createInitialState();
+    state = addLargePlan(state, "Plan A", "2026-06-15T00:00:00.000Z");
+    state = addPlanToDate(state, "2026-06-15", state.largePlans[0].id, "2026-06-15T00:01:00.000Z");
+    const entryId = state.dailyEntries["2026-06-15"][0].id;
+    state = addDetailItem(state, "2026-06-15", entryId, "Detail A", "2026-06-15T00:02:00.000Z");
+    const itemId = state.dailyEntries["2026-06-15"][0].detailItems[0].id;
+
+    state = updateDetailItemTitle(state, "2026-06-15", entryId, itemId, "Detail B", "2026-06-15T00:03:00.000Z");
+
+    expect(state.dailyEntries["2026-06-15"][0].detailItems[0]).toMatchObject({
+      id: itemId,
+      title: "Detail B",
+      updatedAt: "2026-06-15T00:03:00.000Z"
+    });
+  });
+
+  it("removes a detail item and normalizes the remaining orders", () => {
+    let state = createInitialState();
+    state = addLargePlan(state, "Plan A", "2026-06-15T00:00:00.000Z");
+    state = addPlanToDate(state, "2026-06-15", state.largePlans[0].id, "2026-06-15T00:01:00.000Z");
+    const entryId = state.dailyEntries["2026-06-15"][0].id;
+    state = addDetailItem(state, "2026-06-15", entryId, "Detail A", "2026-06-15T00:02:00.000Z");
+    state = addDetailItem(state, "2026-06-15", entryId, "Detail B", "2026-06-15T00:03:00.000Z");
+    const removedId = state.dailyEntries["2026-06-15"][0].detailItems[0].id;
+    const keptId = state.dailyEntries["2026-06-15"][0].detailItems[1].id;
+
+    state = removeDetailItem(state, "2026-06-15", entryId, removedId, "2026-06-15T00:04:00.000Z");
+
+    expect(state.dailyEntries["2026-06-15"][0].updatedAt).toBe("2026-06-15T00:04:00.000Z");
+    expect(state.dailyEntries["2026-06-15"][0].detailItems.map((item) => item.id)).toEqual([keptId]);
+    expect(state.dailyEntries["2026-06-15"][0].detailItems.map((item) => item.order)).toEqual([0]);
   });
 
   it("returns the same state when reordering a missing date", () => {

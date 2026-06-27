@@ -1,4 +1,5 @@
-import type { LargePlan } from "../model/types";
+import { createInitialState } from "../model/plannerModel";
+import type { DailyPlanEntry, DetailItem, LargePlan, PlannerState, PlannerStatus } from "../model/types";
 
 type TokenStore = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 
@@ -36,6 +37,38 @@ const isLargePlan = (value: unknown): value is LargePlan =>
   typeof value.title === "string" &&
   typeof value.createdAt === "string" &&
   typeof value.updatedAt === "string";
+
+const validStatuses = new Set<PlannerStatus>(["waiting", "in_progress", "done"]);
+
+const isDetailItem = (value: unknown): value is DetailItem =>
+  isRecord(value) &&
+  typeof value.id === "string" &&
+  typeof value.title === "string" &&
+  typeof value.order === "number" &&
+  typeof value.status === "string" &&
+  validStatuses.has(value.status as PlannerStatus) &&
+  typeof value.createdAt === "string" &&
+  typeof value.updatedAt === "string";
+
+const isDailyPlanEntry = (value: unknown): value is DailyPlanEntry =>
+  isRecord(value) &&
+  typeof value.id === "string" &&
+  typeof value.date === "string" &&
+  typeof value.largePlanId === "string" &&
+  typeof value.order === "number" &&
+  typeof value.status === "string" &&
+  validStatuses.has(value.status as PlannerStatus) &&
+  Array.isArray(value.detailItems) &&
+  value.detailItems.every(isDetailItem) &&
+  typeof value.createdAt === "string" &&
+  typeof value.updatedAt === "string";
+
+const isPlannerState = (value: unknown): value is PlannerState =>
+  isRecord(value) &&
+  Array.isArray(value.largePlans) &&
+  value.largePlans.every(isLargePlan) &&
+  isRecord(value.dailyEntries) &&
+  Object.values(value.dailyEntries).every((entries) => Array.isArray(entries) && entries.every(isDailyPlanEntry));
 
 export const createPlanSyncClient = ({
   apiUrl = resolvePlanApiUrl(import.meta.env.VITE_PLANNER_API_URL),
@@ -82,27 +115,39 @@ export const createPlanSyncClient = ({
       tokenStore.setItem(TOKEN_KEY, body.token);
     },
 
-    async loadPlans() {
+    async loadState() {
       const response = await fetchImpl(`${baseUrl}/api/plans`, {
         headers: authenticatedHeaders()
       });
       failUnauthorized(response);
       if (!response.ok) throw new Error("load_failed");
       const body: unknown = await response.json();
-      if (!isRecord(body) || !Array.isArray(body.plans) || !body.plans.every(isLargePlan)) {
+      if (!isRecord(body)) {
         throw new Error("invalid_plans_response");
       }
-      return body.plans;
+      if (isPlannerState(body.state)) return body.state;
+      if (Array.isArray(body.plans) && body.plans.every(isLargePlan)) {
+        return { ...createInitialState(), largePlans: body.plans };
+      }
+      throw new Error("invalid_plans_response");
     },
 
-    async savePlans(plans: LargePlan[]) {
+    async saveState(state: PlannerState) {
       const response = await fetchImpl(`${baseUrl}/api/plans`, {
         method: "PUT",
         headers: { ...authenticatedHeaders(), "content-type": "application/json" },
-        body: JSON.stringify({ plans })
+        body: JSON.stringify({ state })
       });
       failUnauthorized(response);
       if (!response.ok) throw new Error("save_failed");
+    },
+
+    async loadPlans() {
+      return (await this.loadState()).largePlans;
+    },
+
+    async savePlans(plans: LargePlan[]) {
+      await this.saveState({ ...createInitialState(), largePlans: plans });
     }
   };
 };

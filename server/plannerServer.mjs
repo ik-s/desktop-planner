@@ -35,6 +35,40 @@ const isLargePlan = (value) =>
   typeof value.createdAt === "string" &&
   typeof value.updatedAt === "string";
 
+const validStatuses = new Set(["waiting", "in_progress", "done"]);
+
+const isDetailItem = (value) =>
+  isRecord(value) &&
+  typeof value.id === "string" &&
+  typeof value.title === "string" &&
+  typeof value.order === "number" &&
+  validStatuses.has(value.status) &&
+  typeof value.createdAt === "string" &&
+  typeof value.updatedAt === "string";
+
+const isDailyPlanEntry = (value) =>
+  isRecord(value) &&
+  typeof value.id === "string" &&
+  typeof value.date === "string" &&
+  typeof value.largePlanId === "string" &&
+  typeof value.order === "number" &&
+  validStatuses.has(value.status) &&
+  Array.isArray(value.detailItems) &&
+  value.detailItems.every(isDetailItem) &&
+  typeof value.createdAt === "string" &&
+  typeof value.updatedAt === "string";
+
+const isPlannerState = (value) =>
+  isRecord(value) &&
+  Array.isArray(value.largePlans) &&
+  value.largePlans.every(isLargePlan) &&
+  isRecord(value.dailyEntries) &&
+  Object.values(value.dailyEntries).every((entries) => Array.isArray(entries) && entries.every(isDailyPlanEntry));
+
+const createEmptyState = () => ({ largePlans: [], dailyEntries: {} });
+
+const stateFromPlans = (plans) => ({ largePlans: plans, dailyEntries: {} });
+
 const readJsonBody = async (request) => {
   const chunks = [];
   for await (const chunk of request) chunks.push(chunk);
@@ -100,19 +134,21 @@ const tryServeStatic = async (request, response, staticDir) => {
   }
 };
 
-const loadPlans = async (dataFile) => {
+const loadState = async (dataFile) => {
   try {
     const parsed = JSON.parse(await readFile(dataFile, "utf8"));
-    return Array.isArray(parsed.plans) && parsed.plans.every(isLargePlan) ? parsed.plans : [];
+    if (isPlannerState(parsed.state)) return parsed.state;
+    if (Array.isArray(parsed.plans) && parsed.plans.every(isLargePlan)) return stateFromPlans(parsed.plans);
+    return createEmptyState();
   } catch (error) {
-    if (error?.code === "ENOENT") return [];
+    if (error?.code === "ENOENT") return createEmptyState();
     throw error;
   }
 };
 
-const savePlans = async (dataFile, plans) => {
+const saveState = async (dataFile, state) => {
   await mkdir(dirname(dataFile), { recursive: true });
-  await writeFile(dataFile, `${JSON.stringify({ plans }, null, 2)}\n`, "utf8");
+  await writeFile(dataFile, `${JSON.stringify({ state }, null, 2)}\n`, "utf8");
 };
 
 const makeToken = (username, password) =>
@@ -154,18 +190,26 @@ export const createPlannerServer = ({
         }
 
         if (request.method === "GET") {
-          sendJson(response, 200, { plans: await loadPlans(dataFile) });
+          const state = await loadState(dataFile);
+          sendJson(response, 200, { state, plans: state.largePlans });
           return;
         }
 
         if (request.method === "PUT") {
           const body = await readJsonBody(request);
+          if (isPlannerState(body.state)) {
+            await saveState(dataFile, body.state);
+            sendJson(response, 200, { state: body.state, plans: body.state.largePlans });
+            return;
+          }
+
           if (!Array.isArray(body.plans) || !body.plans.every(isLargePlan)) {
             sendJson(response, 400, { error: "invalid_plans" });
             return;
           }
-          await savePlans(dataFile, body.plans);
-          sendJson(response, 200, { plans: body.plans });
+          const state = stateFromPlans(body.plans);
+          await saveState(dataFile, state);
+          sendJson(response, 200, { state, plans: body.plans });
           return;
         }
       }

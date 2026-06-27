@@ -325,9 +325,39 @@ h2 {
 }
 
 .detail-row {
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  grid-template-columns: auto minmax(0, 1fr) auto auto auto;
   min-height: 64px;
   padding: 14px 16px;
+}
+
+.detail-row__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.detail-edit-field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.detail-edit-field input {
+  width: 100%;
+  min-width: 0;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid rgba(88, 101, 242, 0.48);
+  border-radius: 12px;
+  background: rgba(10, 13, 58, 0.72);
+  color: #ffffff;
+  font: inherit;
+  font-weight: 800;
+}
+
+.detail-edit-field input:focus {
+  border-color: #5865f2;
+  outline: none;
 }
 
 .empty-state {
@@ -724,6 +754,10 @@ h2 {
   .detail-row .status-select {
     grid-column: 2 / -1;
     width: 100%;
+  }
+
+  .detail-row__actions {
+    grid-column: 2 / -1;
   }
 
   .large-plan-card {

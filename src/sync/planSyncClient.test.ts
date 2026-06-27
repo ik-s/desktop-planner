@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { createPlanSyncClient, resolvePlanApiUrl } from "./planSyncClient";
-import type { LargePlan } from "../model/types";
+import type { LargePlan, PlannerState } from "../model/types";
 
 const createMemoryTokenStore = () => {
   let token: string | null = null;
@@ -79,7 +79,63 @@ describe("plan sync client", () => {
     expect(fetchImpl).toHaveBeenNthCalledWith(3, "http://planner.test/api/plans", {
       method: "PUT",
       headers: { authorization: "Bearer server-token", "content-type": "application/json" },
-      body: JSON.stringify({ plans })
+      body: JSON.stringify({ state: { largePlans: plans, dailyEntries: {} } })
+    });
+  });
+
+  it("loads and saves the full planner state with detail items", async () => {
+    const state: PlannerState = {
+      largePlans: [
+        {
+          id: "plan-rust",
+          title: "Rust",
+          createdAt: "2026-06-28T00:00:00.000Z",
+          updatedAt: "2026-06-28T00:00:00.000Z"
+        }
+      ],
+      dailyEntries: {
+        "2026-06-28": [
+          {
+            id: "entry-rust",
+            date: "2026-06-28",
+            largePlanId: "plan-rust",
+            order: 0,
+            status: "waiting",
+            createdAt: "2026-06-28T00:00:00.000Z",
+            updatedAt: "2026-06-28T00:00:00.000Z",
+            detailItems: [
+              {
+                id: "detail-1",
+                title: "Rust lesson",
+                order: 0,
+                status: "in_progress",
+                createdAt: "2026-06-28T00:00:00.000Z",
+                updatedAt: "2026-06-28T00:00:00.000Z"
+              }
+            ]
+          }
+        ]
+      }
+    };
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ token: "server-token" }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ state }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ state }), { status: 200 }));
+    const client = createPlanSyncClient({
+      apiUrl: "http://planner.test/",
+      fetchImpl,
+      tokenStore: createMemoryTokenStore()
+    });
+
+    await client.login("me", "secret");
+    await expect(client.loadState()).resolves.toEqual(state);
+    await client.saveState(state);
+
+    expect(fetchImpl).toHaveBeenNthCalledWith(3, "http://planner.test/api/plans", {
+      method: "PUT",
+      headers: { authorization: "Bearer server-token", "content-type": "application/json" },
+      body: JSON.stringify({ state })
     });
   });
 

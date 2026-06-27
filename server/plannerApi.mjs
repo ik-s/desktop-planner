@@ -9,6 +9,38 @@ export const isLargePlan = (value) =>
   typeof value.createdAt === "string" &&
   typeof value.updatedAt === "string";
 
+const validStatuses = new Set(["waiting", "in_progress", "done"]);
+
+const isDetailItem = (value) =>
+  isRecord(value) &&
+  typeof value.id === "string" &&
+  typeof value.title === "string" &&
+  typeof value.order === "number" &&
+  validStatuses.has(value.status) &&
+  typeof value.createdAt === "string" &&
+  typeof value.updatedAt === "string";
+
+const isDailyPlanEntry = (value) =>
+  isRecord(value) &&
+  typeof value.id === "string" &&
+  typeof value.date === "string" &&
+  typeof value.largePlanId === "string" &&
+  typeof value.order === "number" &&
+  validStatuses.has(value.status) &&
+  Array.isArray(value.detailItems) &&
+  value.detailItems.every(isDetailItem) &&
+  typeof value.createdAt === "string" &&
+  typeof value.updatedAt === "string";
+
+export const isPlannerState = (value) =>
+  isRecord(value) &&
+  Array.isArray(value.largePlans) &&
+  value.largePlans.every(isLargePlan) &&
+  isRecord(value.dailyEntries) &&
+  Object.values(value.dailyEntries).every((entries) => Array.isArray(entries) && entries.every(isDailyPlanEntry));
+
+const stateFromPlans = (plans) => ({ largePlans: plans, dailyEntries: {} });
+
 export const makeToken = (username, password) =>
   createHash("sha256").update(`${username}:${password}`).digest("hex");
 
@@ -70,18 +102,34 @@ export const createPlansHandler =
     }
 
     if (request.method === "GET") {
-      sendJson(response, 200, { plans: await store.loadPlans() });
+      const state = store.loadState ? await store.loadState() : stateFromPlans(await store.loadPlans());
+      sendJson(response, 200, { state, plans: state.largePlans });
       return;
     }
 
     if (request.method === "PUT") {
       const body = getBody(request);
+      if (isPlannerState(body.state)) {
+        if (store.saveState) {
+          await store.saveState(body.state);
+        } else {
+          await store.savePlans(body.state.largePlans);
+        }
+        sendJson(response, 200, { state: body.state, plans: body.state.largePlans });
+        return;
+      }
+
       if (!Array.isArray(body.plans) || !body.plans.every(isLargePlan)) {
         sendJson(response, 400, { error: "invalid_plans" });
         return;
       }
-      await store.savePlans(body.plans);
-      sendJson(response, 200, { plans: body.plans });
+      const state = stateFromPlans(body.plans);
+      if (store.saveState) {
+        await store.saveState(state);
+      } else {
+        await store.savePlans(body.plans);
+      }
+      sendJson(response, 200, { state, plans: body.plans });
       return;
     }
 

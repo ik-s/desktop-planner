@@ -192,3 +192,64 @@ export const updateDetailItemStatus = (
     }
   };
 };
+
+export const updateDetailItemTitle = (
+  state: PlannerState,
+  date: string,
+  entryId: string,
+  itemId: string,
+  title: string,
+  now: string
+): PlannerState => {
+  const trimmed = title.trim();
+  if (!trimmed) return state;
+  const entries = state.dailyEntries[date];
+  if (!entries) return state;
+  const targetEntry = entries.find((entry) => entry.id === entryId);
+  if (!targetEntry || !targetEntry.detailItems.some((item) => item.id === itemId)) return state;
+  return {
+    ...state,
+    dailyEntries: {
+      ...state.dailyEntries,
+      [date]: entries.map((entry) =>
+        entry.id === entryId
+          ? {
+              ...entry,
+              updatedAt: now,
+              detailItems: entry.detailItems.map((item) =>
+                item.id === itemId ? { ...item, title: trimmed, updatedAt: now } : item
+              )
+            }
+          : entry
+      )
+    }
+  };
+};
+
+export const removeDetailItem = (
+  state: PlannerState,
+  date: string,
+  entryId: string,
+  itemId: string,
+  now: string
+): PlannerState => {
+  const entries = state.dailyEntries[date];
+  if (!entries) return state;
+  const targetEntry = entries.find((entry) => entry.id === entryId);
+  if (!targetEntry || !targetEntry.detailItems.some((item) => item.id === itemId)) return state;
+  return {
+    ...state,
+    dailyEntries: {
+      ...state.dailyEntries,
+      [date]: entries.map((entry) =>
+        entry.id === entryId
+          ? {
+              ...entry,
+              updatedAt: now,
+              detailItems: normalizeOrders(entry.detailItems.filter((item) => item.id !== itemId))
+            }
+          : entry
+      )
+    }
+  };
+};

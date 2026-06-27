@@ -29,6 +29,8 @@ export type PlanDetailViewProps = {
   onAddDetailItem(entryId: string, title: string): void;
   onEntryStatusChange(entryId: string, status: PlannerStatus): void;
   onDetailItemStatusChange(entryId: string, itemId: string, status: PlannerStatus): void;
+  onDetailItemTitleChange(entryId: string, itemId: string, title: string): void;
+  onRemoveDetailItem(entryId: string, itemId: string): void;
   onReorderDetailItems(activeId: string, overId: string): void;
 };
 
@@ -40,6 +42,8 @@ export function PlanDetailView({
   onAddDetailItem,
   onEntryStatusChange,
   onDetailItemStatusChange,
+  onDetailItemTitleChange,
+  onRemoveDetailItem,
   onReorderDetailItems
 }: PlanDetailViewProps) {
   const [detailTitle, setDetailTitle] = useState("");
@@ -121,6 +125,8 @@ export function PlanDetailView({
                   key={item.id}
                   item={item}
                   onStatusChange={(itemId, status) => onDetailItemStatusChange(entry.id, itemId, status)}
+                  onTitleChange={(itemId, title) => onDetailItemTitleChange(entry.id, itemId, title)}
+                  onRemove={(itemId) => onRemoveDetailItem(entry.id, itemId)}
                 />
               ))}
             </div>

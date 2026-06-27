@@ -65,6 +65,8 @@ describe("PlanDetailView", () => {
         onAddDetailItem={vi.fn()}
         onEntryStatusChange={vi.fn()}
         onDetailItemStatusChange={vi.fn()}
+        onDetailItemTitleChange={vi.fn()}
+        onRemoveDetailItem={vi.fn()}
         onReorderDetailItems={vi.fn()}
       />
     );
@@ -123,6 +125,8 @@ describe("PlanDetailView", () => {
         onAddDetailItem={vi.fn()}
         onEntryStatusChange={vi.fn()}
         onDetailItemStatusChange={vi.fn()}
+        onDetailItemTitleChange={vi.fn()}
+        onRemoveDetailItem={vi.fn()}
         onReorderDetailItems={vi.fn()}
       />
     );
@@ -131,6 +135,60 @@ describe("PlanDetailView", () => {
     expect(screen.getByRole("button", { name: "Second detail 세부 항목 순서 변경" })).not.toBeNull();
     expect(screen.getByLabelText("First detail 상태")).toHaveProperty("value", "waiting");
     expect(screen.getByLabelText("Second detail 상태")).toHaveProperty("value", "done");
+  });
+  it("allows detail items to be edited and removed", () => {
+    const entry: DailyPlanEntry = {
+      id: "entry-1",
+      date: "2026-06-15",
+      largePlanId: "plan-1",
+      order: 0,
+      status: "waiting",
+      detailItems: [
+        {
+          id: "item-1",
+          title: "First detail",
+          order: 0,
+          status: "waiting",
+          createdAt: "2026-06-15T00:00:00.000Z",
+          updatedAt: "2026-06-15T00:00:00.000Z"
+        }
+      ],
+      createdAt: "2026-06-15T00:00:00.000Z",
+      updatedAt: "2026-06-15T00:00:00.000Z"
+    };
+    const plan: LargePlan = {
+      id: "plan-1",
+      title: "Focus Plan",
+      createdAt: "2026-06-15T00:00:00.000Z",
+      updatedAt: "2026-06-15T00:00:00.000Z"
+    };
+    const onDetailItemTitleChange = vi.fn();
+    const onRemoveDetailItem = vi.fn();
+
+    render(
+      <PlanDetailView
+        date="2026-06-15"
+        entry={entry}
+        plan={plan}
+        onBack={vi.fn()}
+        onAddDetailItem={vi.fn()}
+        onEntryStatusChange={vi.fn()}
+        onDetailItemStatusChange={vi.fn()}
+        onDetailItemTitleChange={onDetailItemTitleChange}
+        onRemoveDetailItem={onRemoveDetailItem}
+        onReorderDetailItems={vi.fn()}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "First detail 수정" }));
+    fireEvent.change(screen.getByLabelText("First detail 제목 수정"), { target: { value: "Updated detail" } });
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+
+    expect(onDetailItemTitleChange).toHaveBeenCalledWith("entry-1", "item-1", "Updated detail");
+
+    fireEvent.click(screen.getByRole("button", { name: "First detail 삭제" }));
+
+    expect(onRemoveDetailItem).toHaveBeenCalledWith("entry-1", "item-1");
   });
 });
 
@@ -283,6 +341,8 @@ describe("App planner persistence", () => {
     getSession: () => ({ isAuthenticated: true }),
     login: vi.fn().mockResolvedValue(undefined),
     logout: vi.fn(),
+    loadState: vi.fn().mockResolvedValue({ largePlans: [], dailyEntries: {} }),
+    saveState: vi.fn().mockResolvedValue(undefined),
     loadPlans: vi.fn().mockResolvedValue([]),
     savePlans: vi.fn().mockResolvedValue(undefined)
   });
@@ -369,6 +429,8 @@ describe("App planner persistence", () => {
       getSession: () => ({ isAuthenticated: false }),
       login: vi.fn().mockResolvedValue(undefined),
       logout: vi.fn(),
+      loadState: vi.fn().mockResolvedValue({ largePlans: [remotePlan], dailyEntries: {} }),
+      saveState: vi.fn().mockResolvedValue(undefined),
       loadPlans: vi.fn().mockResolvedValue([remotePlan]),
       savePlans: vi.fn().mockResolvedValue(undefined)
     };
@@ -383,11 +445,75 @@ describe("App planner persistence", () => {
     expect(syncClient.login).toHaveBeenCalledWith("me", "secret");
   });
 
+  it("refreshes authenticated planner state when the browser regains focus", async () => {
+    const dateKey = formatDateKey(new Date());
+    const remotePlan: LargePlan = {
+      id: "plan-rust",
+      title: "Rust",
+      createdAt: "2026-06-28T00:00:00.000Z",
+      updatedAt: "2026-06-28T00:00:00.000Z"
+    };
+    const baseEntry: DailyPlanEntry = {
+      id: "entry-rust",
+      date: dateKey,
+      largePlanId: remotePlan.id,
+      order: 0,
+      status: "waiting",
+      detailItems: [],
+      createdAt: "2026-06-28T00:00:00.000Z",
+      updatedAt: "2026-06-28T00:00:00.000Z"
+    };
+    const focusedState: PlannerState = {
+      largePlans: [remotePlan],
+      dailyEntries: {
+        [dateKey]: [
+          {
+            ...baseEntry,
+            detailItems: [
+              {
+                id: "detail-rust",
+                title: "Synced detail",
+                order: 0,
+                status: "waiting",
+                createdAt: "2026-06-28T00:00:00.000Z",
+                updatedAt: "2026-06-28T00:00:00.000Z"
+              }
+            ]
+          }
+        ]
+      }
+    };
+    const syncClient: PlanSyncClient = {
+      getSession: () => ({ isAuthenticated: true }),
+      login: vi.fn().mockResolvedValue(undefined),
+      logout: vi.fn(),
+      loadState: vi
+        .fn()
+        .mockResolvedValueOnce({ largePlans: [remotePlan], dailyEntries: { [dateKey]: [baseEntry] } })
+        .mockResolvedValueOnce(focusedState),
+      saveState: vi.fn().mockResolvedValue(undefined),
+      loadPlans: vi.fn().mockResolvedValue([remotePlan]),
+      savePlans: vi.fn().mockResolvedValue(undefined)
+    };
+
+    render(<App syncClient={syncClient} />);
+
+    await waitFor(() => expect(document.querySelector<HTMLButtonElement>(".large-plan-card__open")).not.toBeNull());
+    fireEvent.click(document.querySelector<HTMLButtonElement>(".large-plan-card__open")!);
+    expect(screen.queryByText("Synced detail")).toBeNull();
+
+    window.dispatchEvent(new Event("focus"));
+
+    expect(await screen.findByText("Synced detail")).not.toBeNull();
+  });
+
   it("keeps the user logged in when plan loading fails after authentication", async () => {
     const syncClient: PlanSyncClient = {
       getSession: () => ({ isAuthenticated: false }),
       login: vi.fn().mockResolvedValue(undefined),
       logout: vi.fn(),
+      loadState: vi.fn().mockRejectedValue(new Error("storage_missing")),
+      saveState: vi.fn().mockRejectedValue(new Error("storage_missing")),
       loadPlans: vi.fn().mockRejectedValue(new Error("storage_missing")),
       savePlans: vi.fn().mockRejectedValue(new Error("storage_missing"))
     };
@@ -418,6 +544,8 @@ describe("App planner persistence", () => {
       getSession: () => ({ isAuthenticated: false }),
       login: vi.fn().mockResolvedValue(undefined),
       logout: vi.fn(),
+      loadState: vi.fn().mockResolvedValue({ largePlans: [], dailyEntries: {} }),
+      saveState: vi.fn().mockResolvedValue(undefined),
       loadPlans: vi.fn().mockResolvedValue([]),
       savePlans: vi.fn().mockResolvedValue(undefined)
     };
