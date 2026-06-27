@@ -17,6 +17,7 @@ export type TodayPlannerViewProps = {
   entries: DailyPlanEntry[];
   plansById: Map<string, LargePlan>;
   onOpenEntry(entryId: string): void;
+  onRemoveEntry(entryId: string): void;
   onAddPlanToToday(planId: string): void;
   onReorderDailyEntries(activeId: string, overId: string): void;
   onDateChange(date: string): void;
@@ -37,6 +38,7 @@ export function TodayPlannerView({
   entries,
   plansById,
   onOpenEntry,
+  onRemoveEntry,
   onAddPlanToToday,
   onReorderDailyEntries,
   onDateChange,
@@ -110,7 +112,15 @@ export function TodayPlannerView({
               {entries.map((entry) => {
                 const plan = plansById.get(entry.largePlanId);
                 if (!plan) return null;
-                return <LargePlanCard key={entry.id} entry={entry} plan={plan} onOpen={() => onOpenEntry(entry.id)} />;
+                return (
+                  <LargePlanCard
+                    key={entry.id}
+                    entry={entry}
+                    plan={plan}
+                    onOpen={() => onOpenEntry(entry.id)}
+                    onRemove={() => onRemoveEntry(entry.id)}
+                  />
+                );
               })}
             </div>
           </SortableContext>

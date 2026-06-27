@@ -5,6 +5,7 @@ import { PlanDetailView } from "./components/PlanDetailView";
 import { TodayPlannerView } from "./components/TodayPlannerView";
 import type { DailyPlanEntry, LargePlan, PlannerState } from "./model/types";
 import type { PlannerStorage } from "./storage/plannerStorage";
+import type { PlanSyncClient } from "./sync/planSyncClient";
 
 describe("formatDateKey", () => {
   it("formats from local date getters instead of UTC ISO output", () => {
@@ -178,6 +179,7 @@ describe("TodayPlannerView", () => {
       ]
     ]);
     const onOpenEntry = vi.fn();
+    const onRemoveEntry = vi.fn();
 
     render(
       <TodayPlannerView
@@ -185,6 +187,7 @@ describe("TodayPlannerView", () => {
         entries={entries}
         plansById={plansById}
         onOpenEntry={onOpenEntry}
+        onRemoveEntry={onRemoveEntry}
         onAddPlanToToday={vi.fn()}
         onReorderDailyEntries={vi.fn()}
         onDateChange={vi.fn()}
@@ -200,6 +203,10 @@ describe("TodayPlannerView", () => {
     fireEvent.click(screen.getByRole("button", { name: "First plan 대기" }));
 
     expect(onOpenEntry).toHaveBeenCalledWith("entry-1");
+
+    fireEvent.click(screen.getByRole("button", { name: "First plan 삭제" }));
+
+    expect(onRemoveEntry).toHaveBeenCalledWith("entry-1");
   });
 });
 
@@ -220,8 +227,16 @@ describe("App planner persistence", () => {
     return formatDateKey(date);
   };
 
+  const createAuthenticatedSyncClient = (): PlanSyncClient => ({
+    getSession: () => ({ isAuthenticated: true }),
+    login: vi.fn().mockResolvedValue(undefined),
+    logout: vi.fn(),
+    loadPlans: vi.fn().mockResolvedValue([]),
+    savePlans: vi.fn().mockResolvedValue(undefined)
+  });
+
   it("keeps entries and detail items isolated by selected date and restores past days", async () => {
-    render(<App />);
+    render(<App syncClient={createAuthenticatedSyncClient()} />);
 
     const dateInput = (await screen.findByLabelText("날짜 선택")) as HTMLInputElement;
     const originalDateKey = dateInput.value;
@@ -231,9 +246,10 @@ describe("App planner persistence", () => {
     expect(screen.getByRole("button", { name: "다음 날" })).not.toBeNull();
     expect(screen.getByRole("button", { name: "오늘" })).not.toBeNull();
 
-    fireEvent.change(screen.getByLabelText("새 큰 계획"), { target: { value: "테스트 계획" } });
-    fireEvent.click(screen.getByRole("button", { name: "큰 계획 만들기" }));
-    fireEvent.click(await screen.findByRole("button", { name: "선택 날짜 추가" }));
+    fireEvent.click(await screen.findByRole("button", { name: "큰 계획 만들기" }));
+    fireEvent.change(await screen.findByLabelText("새 큰 계획 제목"), { target: { value: "테스트 계획" } });
+    fireEvent.click(screen.getByRole("button", { name: "추가" }));
+    fireEvent.click(await screen.findByRole("button", { name: "+ 테스트 계획" }));
 
     fireEvent.click(document.querySelector<HTMLButtonElement>(".large-plan-card__open")!);
     fireEvent.change(document.querySelector<HTMLInputElement>("#detail-item-title")!, {
@@ -256,14 +272,15 @@ describe("App planner persistence", () => {
   });
 
   it("starts empty, wires real planner actions, and reloads persisted state", async () => {
-    const firstRender = render(<App />);
+    const firstRender = render(<App syncClient={createAuthenticatedSyncClient()} />);
 
     await screen.findByText("선택한 날짜에 등록된 큰 계획이 없습니다");
     expect(screen.queryByText(/Rust/)).toBeNull();
 
-    fireEvent.change(screen.getByLabelText("새 큰 계획"), { target: { value: "운동" } });
-    fireEvent.click(screen.getByRole("button", { name: "큰 계획 만들기" }));
-    fireEvent.click(screen.getByRole("button", { name: "선택 날짜 추가" }));
+    fireEvent.click(await screen.findByRole("button", { name: "큰 계획 만들기" }));
+    fireEvent.change(await screen.findByLabelText("새 큰 계획 제목"), { target: { value: "운동" } });
+    fireEvent.click(screen.getByRole("button", { name: "추가" }));
+    fireEvent.click(screen.getByRole("button", { name: "+ 운동" }));
 
     fireEvent.click(screen.getByRole("button", { name: "운동 대기" }));
 
@@ -281,11 +298,68 @@ describe("App planner persistence", () => {
     });
 
     firstRender.unmount();
-    render(<App />);
+    render(<App syncClient={createAuthenticatedSyncClient()} />);
 
     fireEvent.click(await screen.findByRole("button", { name: /운동.*진행중/ }));
     expect(await screen.findByText("스트레칭")).not.toBeNull();
     expect(screen.getByLabelText("계획 상태")).toHaveProperty("value", "in_progress");
     expect(screen.getByLabelText("스트레칭 상태")).toHaveProperty("value", "done");
+  });
+
+  it("loads server large plans after login", async () => {
+    const remotePlan: LargePlan = {
+      id: "plan-remote-rust",
+      title: "Rust 공부",
+      createdAt: "2026-06-28T00:00:00.000Z",
+      updatedAt: "2026-06-28T00:00:00.000Z"
+    };
+    const syncClient: PlanSyncClient = {
+      getSession: () => ({ isAuthenticated: false }),
+      login: vi.fn().mockResolvedValue(undefined),
+      logout: vi.fn(),
+      loadPlans: vi.fn().mockResolvedValue([remotePlan]),
+      savePlans: vi.fn().mockResolvedValue(undefined)
+    };
+
+    render(<App syncClient={syncClient} />);
+
+    fireEvent.change(await screen.findByLabelText("아이디"), { target: { value: "me" } });
+    fireEvent.change(screen.getByLabelText("비밀번호"), { target: { value: "secret" } });
+    fireEvent.click(screen.getByRole("button", { name: "로그인" }));
+
+    expect(await screen.findByText("Rust 공부")).not.toBeNull();
+    expect(syncClient.login).toHaveBeenCalledWith("me", "secret");
+  });
+
+  it("hides locally persisted large plans until server login succeeds", async () => {
+    const localPlan: LargePlan = {
+      id: "plan-local",
+      title: "로컬에만 있던 계획",
+      createdAt: "2026-06-28T00:00:00.000Z",
+      updatedAt: "2026-06-28T00:00:00.000Z"
+    };
+    const storage: PlannerStorage = {
+      loadState: vi.fn().mockResolvedValue({ largePlans: [localPlan], dailyEntries: {} }),
+      saveState: vi.fn().mockResolvedValue(undefined)
+    };
+    const syncClient: PlanSyncClient = {
+      getSession: () => ({ isAuthenticated: false }),
+      login: vi.fn().mockResolvedValue(undefined),
+      logout: vi.fn(),
+      loadPlans: vi.fn().mockResolvedValue([]),
+      savePlans: vi.fn().mockResolvedValue(undefined)
+    };
+
+    render(<App storage={storage} syncClient={syncClient} />);
+
+    await screen.findByText("로그인하면 서버에 저장된 큰 계획을 불러옵니다.");
+    expect(screen.queryByText("로컬에만 있던 계획")).toBeNull();
+    expect(screen.queryByLabelText("새 큰 계획")).toBeNull();
+  });
+
+  it("explains that sync login uses a fixed local account", async () => {
+    render(<App />);
+
+    expect(await screen.findByText("회원가입 없이 로컬 서버 계정으로 로그인합니다.")).not.toBeNull();
   });
 });

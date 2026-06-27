@@ -1,10 +1,20 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical } from "lucide-react";
+import { GripVertical, Trash2 } from "lucide-react";
 import type { DailyPlanEntry, LargePlan } from "../model/types";
 import { StatusBadge } from "./StatusBadge";
 
-export function LargePlanCard({ entry, plan, onOpen }: { entry: DailyPlanEntry; plan: LargePlan; onOpen(): void }) {
+export function LargePlanCard({
+  entry,
+  plan,
+  onOpen,
+  onRemove
+}: {
+  entry: DailyPlanEntry;
+  plan: LargePlan;
+  onOpen(): void;
+  onRemove(): void;
+}) {
   const previewItems = entry.detailItems.slice(0, 2);
   const hiddenCount = Math.max(entry.detailItems.length - previewItems.length, 0);
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: entry.id });
@@ -26,6 +36,10 @@ export function LargePlanCard({ entry, plan, onOpen }: { entry: DailyPlanEntry; 
           </div>
         </div>
         <StatusBadge status={entry.status} />
+      </button>
+      <button className="icon-button icon-button--danger large-plan-card__delete" type="button" onClick={onRemove}>
+        <Trash2 size={18} aria-hidden />
+        <span className="sr-only">{plan.title} 삭제</span>
       </button>
     </div>
   );

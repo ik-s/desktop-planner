@@ -6,8 +6,11 @@ import {
   createInitialState,
   reorderDailyEntries,
   reorderDetailItems,
+  removeDailyEntry,
   updateDailyEntryStatus,
-  updateDetailItemStatus
+  updateDetailItemStatus,
+  removeLargePlan,
+  updateLargePlanTitle
 } from "./plannerModel";
 
 describe("plannerModel", () => {
@@ -23,6 +26,59 @@ describe("plannerModel", () => {
     state = addPlanToDate(state, "2026-06-15", state.largePlans[0].id, "2026-06-15T00:01:00.000Z");
     expect(state.dailyEntries["2026-06-15"][0].largePlanId).toBe(state.largePlans[0].id);
     expect(state.dailyEntries["2026-06-15"][0].order).toBe(0);
+  });
+
+  it("removes a plan from one selected date without deleting the large plan", () => {
+    let state = createInitialState();
+    state = addLargePlan(state, "Plan A", "2026-06-15T00:00:00.000Z");
+    state = addLargePlan(state, "Plan B", "2026-06-15T00:01:00.000Z");
+    const keptLargePlanIds = state.largePlans.map((plan) => plan.id);
+    state = addPlanToDate(state, "2026-06-15", state.largePlans[0].id, "2026-06-15T00:02:00.000Z");
+    state = addPlanToDate(state, "2026-06-15", state.largePlans[1].id, "2026-06-15T00:03:00.000Z");
+    state = addPlanToDate(state, "2026-06-16", state.largePlans[0].id, "2026-06-15T00:04:00.000Z");
+    const removedEntryId = state.dailyEntries["2026-06-15"][0].id;
+    const keptEntryId = state.dailyEntries["2026-06-15"][1].id;
+
+    state = removeDailyEntry(state, "2026-06-15", removedEntryId);
+
+    expect(state.largePlans.map((plan) => plan.id)).toEqual(keptLargePlanIds);
+    expect(state.dailyEntries["2026-06-15"].map((entry) => entry.id)).toEqual([keptEntryId]);
+    expect(state.dailyEntries["2026-06-15"].map((entry) => entry.order)).toEqual([0]);
+    expect(state.dailyEntries["2026-06-16"]).toHaveLength(1);
+  });
+
+  it("renames a large plan without changing its daily entries", () => {
+    let state = createInitialState();
+    state = addLargePlan(state, "Plan A", "2026-06-15T00:00:00.000Z");
+    state = addPlanToDate(state, "2026-06-15", state.largePlans[0].id, "2026-06-15T00:01:00.000Z");
+    const planId = state.largePlans[0].id;
+
+    state = updateLargePlanTitle(state, planId, "Plan B", "2026-06-15T00:02:00.000Z");
+
+    expect(state.largePlans[0]).toMatchObject({
+      id: planId,
+      title: "Plan B",
+      updatedAt: "2026-06-15T00:02:00.000Z"
+    });
+    expect(state.dailyEntries["2026-06-15"][0].largePlanId).toBe(planId);
+  });
+
+  it("removes a large plan and all date entries that reference it", () => {
+    let state = createInitialState();
+    state = addLargePlan(state, "Plan A", "2026-06-15T00:00:00.000Z");
+    state = addLargePlan(state, "Plan B", "2026-06-15T00:01:00.000Z");
+    const removedPlanId = state.largePlans[0].id;
+    const keptPlanId = state.largePlans[1].id;
+    state = addPlanToDate(state, "2026-06-15", removedPlanId, "2026-06-15T00:02:00.000Z");
+    state = addPlanToDate(state, "2026-06-15", keptPlanId, "2026-06-15T00:03:00.000Z");
+    state = addPlanToDate(state, "2026-06-16", removedPlanId, "2026-06-15T00:04:00.000Z");
+
+    state = removeLargePlan(state, removedPlanId);
+
+    expect(state.largePlans.map((plan) => plan.id)).toEqual([keptPlanId]);
+    expect(state.dailyEntries["2026-06-15"].map((entry) => entry.largePlanId)).toEqual([keptPlanId]);
+    expect(state.dailyEntries["2026-06-15"].map((entry) => entry.order)).toEqual([0]);
+    expect(state.dailyEntries["2026-06-16"]).toEqual([]);
   });
 
   it("adds date-scoped detail items inside a daily plan entry", () => {

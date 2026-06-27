@@ -32,6 +32,35 @@ export const addLargePlan = (state: PlannerState, title: string, now: string): P
   return { ...state, largePlans: [...state.largePlans, plan] };
 };
 
+export const updateLargePlanTitle = (
+  state: PlannerState,
+  largePlanId: string,
+  title: string,
+  now: string
+): PlannerState => {
+  const trimmed = title.trim();
+  if (!trimmed || !state.largePlans.some((plan) => plan.id === largePlanId)) return state;
+  return {
+    ...state,
+    largePlans: state.largePlans.map((plan) =>
+      plan.id === largePlanId ? { ...plan, title: trimmed, updatedAt: now } : plan
+    )
+  };
+};
+
+export const removeLargePlan = (state: PlannerState, largePlanId: string): PlannerState => {
+  if (!state.largePlans.some((plan) => plan.id === largePlanId)) return state;
+  return {
+    largePlans: state.largePlans.filter((plan) => plan.id !== largePlanId),
+    dailyEntries: Object.fromEntries(
+      Object.entries(state.dailyEntries).map(([date, entries]) => [
+        date,
+        normalizeOrders(entries.filter((entry) => entry.largePlanId !== largePlanId))
+      ])
+    )
+  };
+};
+
 export const addPlanToDate = (state: PlannerState, date: string, largePlanId: string, now: string): PlannerState => {
   if (!state.largePlans.some((plan) => plan.id === largePlanId)) return state;
   const entries = state.dailyEntries[date] ?? [];
@@ -47,6 +76,18 @@ export const addPlanToDate = (state: PlannerState, date: string, largePlanId: st
     updatedAt: now
   };
   return { ...state, dailyEntries: { ...state.dailyEntries, [date]: [...entries, entry] } };
+};
+
+export const removeDailyEntry = (state: PlannerState, date: string, entryId: string): PlannerState => {
+  const entries = state.dailyEntries[date];
+  if (!entries || !entries.some((entry) => entry.id === entryId)) return state;
+  return {
+    ...state,
+    dailyEntries: {
+      ...state.dailyEntries,
+      [date]: normalizeOrders(entries.filter((entry) => entry.id !== entryId))
+    }
+  };
 };
 
 export const addDetailItem = (

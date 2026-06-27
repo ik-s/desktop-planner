@@ -3,3 +3,5 @@ node_modules/
 dist/
 *.tsbuildinfo
 .superpowers/
+.env
+server/data/

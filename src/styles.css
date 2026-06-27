@@ -117,6 +117,7 @@ button:disabled {
 
 h1,
 h2,
+h3,
 p {
   margin: 0;
 }
@@ -226,6 +227,11 @@ h2 {
   color: inherit;
   text-align: left;
   background: transparent;
+}
+
+.large-plan-card__delete {
+  background: rgba(236, 72, 189, 0.16);
+  color: #ff8edc;
 }
 
 .large-plan-card__content {
@@ -375,8 +381,85 @@ h2 {
   margin-bottom: 18px;
 }
 
+.create-plan-form__label {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.create-plan-trigger {
+  width: 100%;
+}
+
+.sync-panel {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 18px;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  background: rgba(10, 13, 58, 0.4);
+}
+
+.sync-panel__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.sync-panel p {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.sync-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.38);
+}
+
+.sync-dot--syncing {
+  background: #5865f2;
+}
+
+.sync-dot--authenticated {
+  background: #35ed7e;
+}
+
+.sync-dot--error {
+  background: #ec48bd;
+}
+
+.sync-form {
+  display: grid;
+  gap: 8px;
+}
+
+.sync-form input {
+  min-width: 0;
+  height: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 0 12px;
+  background: rgba(10, 13, 58, 0.72);
+  color: #ffffff;
+  outline: none;
+}
+
+.sync-form input:focus {
+  border-color: #5865f2;
+}
+
+.sync-panel__full-button {
+  width: 100%;
+}
+
 .create-plan-form label,
 .add-detail-form label,
+.sync-form label,
 .status-control label {
   color: rgba(255, 255, 255, 0.72);
   font-size: 0.86rem;
@@ -437,10 +520,105 @@ h2 {
   color: rgba(255, 255, 255, 0.42);
 }
 
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(10, 13, 58, 0.72);
+  backdrop-filter: blur(8px);
+}
+
+.modal-card {
+  display: grid;
+  gap: 18px;
+  width: min(420px, 100%);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 16px;
+  padding: 22px;
+  background: #1e2353;
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.42);
+}
+
+.modal-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.modal-card h3 {
+  font-size: 1.18rem;
+  line-height: 1.2;
+}
+
+.modal-form {
+  display: grid;
+  gap: 10px;
+}
+
+.modal-form label {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.modal-form input {
+  min-width: 0;
+  height: 44px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 0 13px;
+  background: rgba(10, 13, 58, 0.72);
+  color: #ffffff;
+  outline: none;
+}
+
+.modal-form input:focus {
+  border-color: #5865f2;
+}
+
+.modal-form input::placeholder {
+  color: rgba(255, 255, 255, 0.42);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
 .icon-button {
   width: 44px;
   background: #5865f2;
   color: #ffffff;
+}
+
+.icon-button--green {
+  background: #35ed7e;
+  color: #0f1612;
+}
+
+.icon-button--ghost {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.icon-button--danger {
+  background: rgba(236, 72, 189, 0.16);
+  color: #ff8edc;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
 }
 
 .library-item {
@@ -449,9 +627,42 @@ h2 {
   align-items: center;
   gap: 12px;
   padding: 14px;
-  border-left: 3px solid #ec48bd;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 14px;
   background: rgba(35, 39, 42, 0.76);
+}
+
+.library-item__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.library-edit-field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.library-edit-field span {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.library-edit-field input {
+  min-width: 0;
+  height: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 0 12px;
+  background: rgba(10, 13, 58, 0.72);
+  color: #ffffff;
+  outline: none;
+}
+
+.library-edit-field input:focus {
+  border-color: #5865f2;
 }
 
 @media (max-width: 820px) {
@@ -491,7 +702,7 @@ h2 {
 
 @media (max-width: 520px) {
   .large-plan-card {
-    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-columns: auto minmax(0, 1fr) auto;
   }
 
   .detail-row {
